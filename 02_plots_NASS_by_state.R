@@ -7,14 +7,14 @@
 if(!exists("d")) source("01_read_data.R")
 
 # Plot NASS data for Maine ----
-plot(x = d$y, 
-     y = d$b_ME, pch = 21,
+plot(x = d$y[d$state == "ME"], 
+     y = d$b[d$state == "ME"], pch = 21,
      xlim = c(1960, 2025), ylim = c(40, 140),
      axes = FALSE, xlab = "Year", ylab ="Day of the year")
 axis(side = 1)
 axis(side = 2, las = 1)
-points(x = d$y, 
-       y = d$e_ME, pch = 19)
+points(x = d$y[d$state == "ME"], 
+       y = d$e[d$state == "ME"], pch = 19)
 
 # Plot NASS data for Massachusetts ----
 plot(x = d$y, 

@@ -5,6 +5,7 @@
 
 # Load dependencies ----
 if(!existsFunction("%≥%")) library("tidyverse")
+if(!existsFunction("read_excel")) library("readxl")
 
 # Read NASS data for the individual states ----
 file_name <- "Climate - USDA NASS - Maple Season Open and Close for New England New York - updated through 2023.xlsx"
