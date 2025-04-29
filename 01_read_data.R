@@ -2,58 +2,93 @@
 # Script to read the data for the tapping date analysis
 #-------------------------------------------------------------------------------
 
+# To-do: ----
+# - TR Add Saint Benedict and Saint John's College data from Minnesota
 
 # Load dependencies ----
 if(!existsFunction("%≥%")) library("tidyverse")
 if(!existsFunction("read_excel")) library("readxl")
 
 # Read NASS data for the individual states ----
-file_name <- "Climate - USDA NASS - Maple Season Open and Close for New England New York - updated through 2023.xlsx"
+file_name <- "Tapping season data.xlsx"
 d <- read_excel(path = paste0("./data/", file_name),
-           sheet = "Data",
-           col_names = c("y", "b_ME", "e_ME", "b_MA", "e_MA", "b_NH", "e_NH", 
-                         "b_VT", "e_VT", "b_NY", "e_NY", "XXX", "y_1", "d_ME",
-                         "d_MA", "d_NH", "d_VT", "d_NY", "YYY", "mean_d", 
-                         "yield"),
-           skip = 6,
-           na = "NA") %>%
-  select(-XXX, - YYY, -y_1) %>%
-  pivot_longer(cols = -c(y, mean_d, yield),     
-               names_to = c(".value", "state"),
-               names_sep = "_") %>% 
-  mutate(b_date = as_date(b - 1, origin = paste0(y, "-01-01")),
-         e_date = as_date(e - 1, origin = paste0(y, "-01-01")))
+             sheet = "Data",
+             col_names = c("yr", "o_ME", "c_ME", "o_MA", "c_MA", "o_NH", "c_NH", 
+                           "o_VT", "c_VT", "o_NY", "c_NY", "y_VT", "b_VTC",
+                           "o_VTH", "b_VTH", "c_VTH", "t_VTH"),
+             skip = 6,
+             na = "NA") %>%
+    pivot_longer(cols = -yr,     
+                 names_to = c(".value", "state"),
+                 names_sep = "_") %>% 
+  mutate(o_date = as_date(o - 1, origin = paste0(yr, "-01-01")),
+         c_date = as_date(c - 1, origin = paste0(yr, "-01-01")),
+         b_date = as_date(b - 1, origin = paste0(yr, "-01-01")),
+         d = c-o)
+  
+# Set yield to NA for all states except Vermont, for which this data is ----
+d$y[d$state != "VT"] <- NA
 
-# Read PA data ----
+# Read the Pennsylvania (PA) data for season duration ----
 file_name <- "PA Season Duration - NASS.xlsx"
 d_PA <- read_excel(path = paste0("./data/", file_name),
                    sheet = "Sheet1",
-                   col_names = c("y", "d"),
+                   col_names = c("yr", "d"),
                    skip = 3) %>%
   mutate(state = "PA")
 
 # Combine PA and other NASS data ---
 d <- bind_rows(d, d_PA)
+rm(d_PA)
 
-# Read Central VT data ----
-# TR - Column L is not clear to me. It seems to simply repeat column K.
-# TR - Columns P & Q seem to repeat columns N & O, but with some adjustment for 
-# leap years, which I do not understand.
-# TR - I do not read the NASS data for Vermont because we already read it above.
-file_name <- "Climate- Central Vermont - Historical sugaring data.xlsx"
-d_VT <- read_excel(path = paste0("./data/", file_name),
-                   sheet = "Sheet2",
-                   col_names = c("y", "tap_date", "boil", "delay", "e", "type", 
-                                 "XXX", "d", "YYY", "VTC", "VTC_boil", 
-                                 "VTC_boil_adj"),
-                   range = "A2:L115", 
-                   na = "NA") %>%
-  select(-XXX, -YYY) %>% 
-  mutate(tap_date = as_date(tap_date),
-         boil = as_date(boil),
-         e = as_date(e),
-         VTC_boil_adj = as_date(VTC_boil_adj)) %>%
-  pivot_longer()
+# Add state's southern most, northern most and mean latitude ----
+# N.B.: Before 1999 only southern Maine was included in the NASS data and since 
+# 1999 all of Maine is included.
+d <- d %>% mutate(m_lat = case_when(
+    state == "ME" & yr <= 1999 ~ 45.25, # Before 1999 they only included southern Maine # TR - Needs to be adjusted
+    state == "ME" & yr >  1999 ~ 45.25, # TR - Needs to change
+    state == "MA" ~ 42.34,
+    state == "NH" ~ 43.68,
+    state == "NY" ~ 42.97,
+    state == "PA" ~ 40.87,
+    state == "VT" ~ 43.93,
+    state == "VTC" ~ 43.94,
+    state == "VTH" ~ 43.94),
+  n_lat = case_when(
+    state == "ME" & yr <= 1999 ~ 45.00, # Before 1999 they only included southern Maine # TR - Needs to be adjusted
+    state == "ME" & yr >  1999 ~ 47.46,
+    state == "MA" ~ 42.88,
+    state == "NH" ~ 45.30,
+    state == "NY" ~ 45.02,
+    state == "PA" ~ 42.27,
+    state == "VT" ~ 45.02,
+    state == "VTC" ~ 43.94,
+    state == "VTH" ~ 43.94),
+  s_lat = case_when(
+    state == "ME" & yr <= 1999 ~ 45.25, # Before 1999 they only included southern Maine # TR - Needs to be adjusted
+    state == "ME" & yr >  1999 ~ 42.96,
+    state == "MA" ~ 41.23,
+    state == "NH" ~ 42.70,
+    state == "NY" ~ 40.30,
+    state == "PA" ~ 39.72,
+    state == "VT" ~ 42.73,
+    state == "VTC" ~ 43.94,
+    state == "VTH" ~ 43.94)) 
+
+# Add a weights column to give more importance to NASS state-averages ----
+d <- d %>% mutate(w = case_when(
+  state == "VTC" ~ 1, 
+  state == "VTH" ~ 1,
+  state != "VTC" & state != "VTH" ~ 100, # TR - Ought to change this to number of responses per state. I assume that this is based on an n = 100 per state.
+))
+
+# Add column for sites within states ----
+d <- d %>% mutate(site = case_when(
+  state == "VTC" ~ "VTC",
+  state == "VTH" ~ "VTH",
+  state != "VTC" & state != "VTH" ~ "NA",
+)) 
+d$state[d$site %in% c("VTC", "VTH")] <- "VT"
 
 # Read St. John's data ----
 file_name <- "Data_St_Johns_All.xlsx"
