@@ -3,7 +3,6 @@
 #-------------------------------------------------------------------------------
 
 # To-do: 
-# - Add Vermont and Saint Benedict data and integrate it into the model ----
 
 # Load dependencies ----
 if(!existsFunction("brms")) library("brms") 
@@ -16,7 +15,7 @@ mod_d <- brm(formula = d ~ yr + (yr | state / site),
              data = d %>% filter(!is.na(d)), 
              family = gaussian(),
              chains = 4, cores = 4, iter = 4000,
-             control = list(adapt_delta = 0.95))
+             control = list(adapt_delta = 0.99))
 summary(mod_d)
 plot(mod_d)
 
@@ -27,10 +26,12 @@ d_random_effects <- ranef(mod_d)  # Random effects by group (state)
 # Plot NASS data for Massachusetts, Maine, New Hampshire, Vermont, New York, 
 # and Pennsylvania ----
 par(mfrow = c(2, 3), mar = c(5, 5, 1, 1))
-for (state in c("ME", "MA", "NH", "NY", "PA", "VT")){
+for (state in c("ME", "MA", "NH", "NY", "PA", "VT", "MN")){
   
   # Determine if there are individual sites in a state (NA for state-wide averages)
-  if (state != "VT") {
+  if (state == "MN") {
+    sites <- "STJ"
+  } else if (state != "VT") {
     sites <- "NA"
   } else {
     sites <- c("NA", "VTH")
@@ -41,7 +42,9 @@ for (state in c("ME", "MA", "NH", "NY", "PA", "VT")){
     if(state != "VT" | (state == "VT" & site == "NA")) {
       plot(x = d$yr[d$state == state & d$site == site], 
            y = d$d[d$state == state & d$site == site], 
-           pch = 19, lwd = 1.5, col = "black",
+           pch = ifelse(site == "NA", 19, 23), 
+           lwd = 1.5, 
+           col = ifelse(site == "NA", "black", "darkgray"),
            xlim = c(ifelse(state != "VT", 1960, 1870), 2025), 
            ylim = c(10, 60),
            axes = FALSE, xlab = "Year", ylab = "Duration (sdays)")
@@ -52,7 +55,8 @@ for (state in c("ME", "MA", "NH", "NY", "PA", "VT")){
              state == "NH" ~ "New Hampshire",
              state == "NY" ~ "New York",
              state == "VT" ~ "Vermont",
-             state == "PA" ~ "Pensylvannia"))
+             state == "PA" ~ "Pensylvannia",
+             state == "MN" ~ "Minnesota"))
       if (state != "VT") {
         x_ats <- seq(1960, 2020, by = 10)
       } else {
@@ -63,7 +67,7 @@ for (state in c("ME", "MA", "NH", "NY", "PA", "VT")){
     } else if (state == "VT" & site == "VTH") {
       points(x = d$yr[d$state == state & d$site == site], 
              y = d$d[d$state == state & d$site == site], 
-             pch = 23, lwd = 1.5, bg = "darkgray", col = "darkgray")
+             pch = 23, lwd = 1.5, col = "darkgray")
     }
   
   

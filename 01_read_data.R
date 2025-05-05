@@ -92,25 +92,50 @@ d$state[d$site %in% c("VTC", "VTH")] <- "VT"
 
 # Read St. John's data ----
 file_name <- "Data_St_Johns_All.xlsx"
-d_StJ1 <- read_excel(path = paste0("./data/", file_name),
-                     sheet = "General Sum",
-                     col_names = c("y", "logical_syrup", "n_taps", "t_sy_y", 
-                                   "t_sa_y", "wood_used", "tapping_date", 
-                                   "untapping", "first_boil", "last_boil", 
-                                   "WWW", "d_boiling", "days_boiling", 
-                                   "batches", "mean_batch_vol", "XXX", 
-                                   "first_sap", "last_sap", "days_collecting", "YYY", "ZZZ", 
-                                   "AAA", "d_collecting", "loads", 
-                                   "max_daily_sap", "min_daily_sap", 
-                                   "mean_daily_sap", "mean_daily_sap_per_tap",
-                                   "sap_yield", "syrup_yield", "BBB", 
-                                   "sap/syrup", "syrup/cord", "brix86", 
-                                   "interval", "CCC", "DDD", "EEE", "y_1", 
-                                   "t_season", "t_offseason", "p_offseason", 
-                                   "brix+1", "yield+1"),
-                     range = "A5:AR87", 
-                     na = "NA") %>%
+d_StJ <- read_excel(path = paste0("./data/", file_name),
+                    sheet = "General Sum",
+                    col_names = c("y", "logical_syrup", "n_taps", "t_sy_y", 
+                                  "t_sa_y", "wood_used", "tapping_date", 
+                                  "untapping", "b", "last_b", 
+                                  "WWW", "d_boiling", "days_boiling", 
+                                  "batches", "mean_batch_vol", "XXX", 
+                                  "first_sap", "last_sap", "days_collecting", "YYY", "ZZZ", 
+                                  "AAA", "d_collecting", "loads", 
+                                  "max_daily_sap", "min_daily_sap", 
+                                  "mean_daily_sap", "mean_daily_sap_per_tap",
+                                  "sap_yield", "syrup_yield", "BBB", 
+                                  "sap/syrup", "syrup/cord", "brix86", 
+                                  "interval", "CCC", "DDD", "EEE", "y_1", 
+                                  "t_season", "t_offseason", "p_offseason", 
+                                  "brix+1", "yield+1"),
+                    range = "A5:AR87", 
+                    na = "NA") %>%
   select(-WWW, -XXX, -YYY, -ZZZ, -AAA, -BBB, -CCC, -DDD, -EEE)
+
+# Convert StJ data into the d format ----
+d1 <- d_StJ %>% 
+  mutate(yr = y,
+         state = "MN",
+         o = yday(tapping_date),
+         c = yday(untapping),
+         y = t_sy_y,
+         b = yday(b),
+         t = "syrup",
+         o_date = as_date(tapping_date),
+         c_date = as_date(untapping),
+         b_date = as_date(b),
+         d = c - o,
+         m_lat = 45.57,
+         n_lat = 45.58,
+         s_lat = 45.56,
+         w = 1,
+         site = "STJ") %>%
+  select(yr, state, o, c, y, b, t, o_date, c_date, b_date, d, m_lat, n_lat, s_lat, w, site)
+
+# Add the Saint John's and Saint Benedict data to the overall data ----
+d <- rbind(d, d1); rm(d1)
+
+# Additional daily data ----
 dates <- format(seq(from = as_date("2024-02-15"), 
                     to = as_date("2024-04-30"), 
                     by = "day"), "%m-%d")
