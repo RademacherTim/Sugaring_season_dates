@@ -118,7 +118,7 @@ d1 <- d_StJ %>%
          state = "MN",
          o = yday(tapping_date),
          c = yday(untapping),
-         y = t_sy_y,
+         y = t_sy_y / n_taps,
          b = yday(b),
          t = "syrup",
          o_date = as_date(tapping_date),

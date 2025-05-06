@@ -126,7 +126,7 @@ for (state in c("ME", "MA", "NH", "NY", "VT", "MN")){
     } else if (state == "VT" & site == "VTC") {
       points(x = d$yr[d$state == state & d$site == site], 
              y = d$b[d$state == state & d$site == site], 
-             pch = 4, lwd = 1.5, col = "darkgreen")
+             pch = 4, lwd = 1.5, col = "#154734")
     }
     
     # Plot open and close for all sites except for VTC ----
@@ -169,7 +169,7 @@ for (state in c("ME", "MA", "NH", "NY", "VT", "MN")){
       
       # Add the linear trends for first boil of the season ----
       abline(a = b_intercept, b = b_slope, 
-             col = ifelse(site == "VTC", "darkgreen", "#555555"),
+             col = ifelse(site == "VTC", "#154734", "#555555"),
              lwd = 2, lty = 3)
     } 
     
