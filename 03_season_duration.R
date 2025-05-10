@@ -2,8 +2,6 @@
 # Script to plot the beginning and end of season dates
 #-------------------------------------------------------------------------------
 
-# To-do: 
-
 # Load dependencies ----
 if(!existsFunction("brms")) library("brms") 
 
