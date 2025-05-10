@@ -87,17 +87,13 @@ for (state in c("ME", "MA", "NH", "NY", "PA", "VT", "MN")){
   } # End site loop
 } # End loop over states
 
-# Plot duration of the season versus the yield ----
-par(mfrow = c(1, 1))
-plot (x = d$d[d$state == "VT"],
-      y = d$y[d$state == "VT"],
-      pch = 19, col = "darkgreen",
-      axes = FALSE, xlim = c(15, 65), ylim = c(0, 0.45),
-      xlab = "Season duration (days)",
-      ylab = "Average yield (gal / tap)")
+# Plot change in season duration versus latitude ----
+plot(x = d %>% group_by(state) %>% summarise(m_lat = mean(m_lat)) %>% select(m_lat) %>% unlist(),
+     y = d_random_effects$state[, "Estimate", "yr"],
+     pch = 19, axes = FALSE,
+     xlab = expression(paste("Latitude (",degree,")")),
+     ylab = "Change in duration (days)")
 axis(side = 1)
 axis(side = 2, las = 1)
-points(x = d$d[d$state == "MN"],
-       y = d$y[d$state == "MN"],
-       pch = 19, col = "#cd1041")
+
 #===============================================================================

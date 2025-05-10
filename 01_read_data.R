@@ -3,7 +3,8 @@
 #-------------------------------------------------------------------------------
 
 # To-do: ----
-# - TR Add Saint Benedict and Saint John's College data from Minnesota
+# TR - Add data from Quebec (PPAQ survey from 1999 to 2011)
+# TR - Add data from Ontario
 
 # Load dependencies ----
 if(!existsFunction("%≥%")) library("tidyverse")
