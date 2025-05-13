@@ -5,7 +5,9 @@
 # To-do: ---- 
 # - TR Something is wrong with the linear trend line for the VTH historic first boil data. The intercept is way to high.
 # - TR Add change in size of operation to analysis (requires appropriate data)
+#         - TR Census of Ag should have this data
 # - TR Add credible interval for the data
+# - TR Add uncertainty for the statewide data, if I can get hold of standard deviation
 
 # Load dependencies ----
 if(!existsFunction("brms")) library("brms") 
@@ -111,7 +113,7 @@ for (state in c("ME", "MA", "NH", "NY", "VT", "MN")){
       if (site == "STJ") {
         points(x = d$yr[d$state == state & d$site == site], 
                y = d$b[d$state == state & d$site == site], 
-               pch = 4, lwd = 1.5, col = "#555555")
+               pch = 4, lwd = 1.5, col = "darkgray")
       }
     } else if (state == "VT" & site == "VTH") {
       points(x = d$yr[d$state == state & d$site == site], 
@@ -122,7 +124,7 @@ for (state in c("ME", "MA", "NH", "NY", "VT", "MN")){
              pch = 25, lwd = 1.5, col = "darkgray", bg = "darkgray")
       points(x = d$yr[d$state == state & d$site == site], 
              y = d$b[d$state == state & d$site == site], 
-             pch = 4, lwd = 1.5, col = "#555555")
+             pch = 4, lwd = 1.5, col = "#FFD416")
     } else if (state == "VT" & site == "VTC") {
       points(x = d$yr[d$state == state & d$site == site], 
              y = d$b[d$state == state & d$site == site], 
@@ -169,7 +171,7 @@ for (state in c("ME", "MA", "NH", "NY", "VT", "MN")){
       
       # Add the linear trends for first boil of the season ----
       abline(a = b_intercept, b = b_slope, 
-             col = ifelse(site == "VTC", "#154734", "#555555"),
+             col = ifelse(site == "VTC", "#154734", ifelse(site == "VTH", "#FFD416", "darkgray")),
              lwd = 2, lty = 3)
     } 
     

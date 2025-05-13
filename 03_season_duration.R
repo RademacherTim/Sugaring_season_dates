@@ -86,6 +86,7 @@ for (state in c("ME", "MA", "NH", "NY", "PA", "VT", "MN")){
 } # End loop over states
 
 # Plot change in season duration versus latitude ----
+par(mar = c (5, 5, 1, 1), mfrow = c(1, 1))
 plot(x = d %>% group_by(state) %>% summarise(m_lat = mean(m_lat)) %>% select(m_lat) %>% unlist(),
      y = d_random_effects$state[, "Estimate", "yr"],
      pch = 19, axes = FALSE,

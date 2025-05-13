@@ -72,7 +72,7 @@ plot (x = d$o[d$state == "VT"],
       y = d$y[d$state == "VT"],
       pch = 15, col = "#154734", cex = 1.2,
       axes = FALSE, xlim = c(40, 90), ylim = c(0, 0.45),
-      xlab = "Season duration (days)",
+      xlab = "Season open (days)",
       ylab = "Average yield (gal / tap)")
 axis(side = 1)
 axis(side = 2, las = 1)
@@ -86,7 +86,7 @@ plot (x = d$c[d$state == "VT"],
       y = d$y[d$state == "VT"],
       pch = 15, col = "#154734", cex = 1.2,
       axes = FALSE, xlim = c(70, 140), ylim = c(0, 0.45),
-      xlab = "Season duration (days)",
+      xlab = "Season close (days)",
       ylab = "Average yield (gal / tap)")
 axis(side = 1)
 axis(side = 2, las = 1)
