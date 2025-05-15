@@ -4,11 +4,14 @@
 
 # To-do: ------------ 
 # - TR Something is wrong with the linear trend line for the VTH historic first boil data. The intercept is way to high.
+#      The problem is with the slope. The intercept is pretty much the same as VTC, which looks good, but the slope is distinguishabel smaller and causes and issue
 # - TR Add change in size of operation to analysis (requires appropriate data)
 #         - TR Census of Ag should have this data
 # - TR Add credible interval for the data
 # - TR Add uncertainty for the statewide data, if I can get hold of standard deviation
 # - TR Do a break-point analysis and fit linear trends to to the decline and increase
+# - TR Add season open data from nine operations in Ontario (S Canadian Forest Service; Robert Sajan (Natural Resources Canada) and Brian Craig (Environment Canada))
+#      N.B.: It might be first boil dates rather than season open
 
 # Load dependencies ----
 if(!existsFunction("brms")) library("brms") 
@@ -60,16 +63,16 @@ b_random_effects <- ranef(mod_b)  # Random effects by group (state)
 # and Pennsylvania ----
 
 # Define the layout matrix
-layout_matrix <- matrix(c(1, 2, 3, 4, 5, 5), nrow = 2, byrow = TRUE)
+layout_matrix <- matrix(c(1, 2, 3, 4, 5, 5, 6, 7, 8), nrow = 3, byrow = TRUE)
 
 # Set the layout ----
-layout(layout_matrix, widths = c(1, 1, 1, 1, 2), heights = c(1, 1))
+layout(layout_matrix, widths = c(1, 1, 1, 1, 2, 1, 1, 1), heights = c(1, 1, 1))
 
 # Set plot margins ----
 par(mar = c(5, 5, 1, 1))
 
 # Loop over states, as there is one plot per state ----
-for (state in c("ME", "MA", "NH", "NY", "VT", "MN")){
+for (state in c("ME", "MA", "NH", "NY", "VT", "MN", "ON")){
   
   # Determine if there are individual sites in a state (NA for state-wide averages)
   if (state != "VT" & state != "MN") {
@@ -98,7 +101,8 @@ for (state in c("ME", "MA", "NH", "NY", "VT", "MN")){
              state == "NY" ~ "New York",
              state == "VT" ~ "Vermont",
              state == "PA" ~ "Pensylvannia",
-             state == "MN" ~ "Minnesota"))
+             state == "MN" ~ "Minnesota",
+             state == "ON" ~ "Ontario"))
       if (state == "MN") {
         x_ats <- seq(1940, 2020, by = 10)
       } else if (state != "VT") {
@@ -142,13 +146,14 @@ for (state in c("ME", "MA", "NH", "NY", "VT", "MN")){
       o_slope <- o_fixed_effects["yr", "Estimate"] + 
         o_random_effects$state[state, "Estimate", "yr"] +
         o_random_effects$`state:site`[paste0(state, "_", site), "Estimate", "yr"]
-      c_intercept <- c_fixed_effects["Intercept", "Estimate"] + 
-        c_random_effects$state[state, "Estimate", "Intercept"] +
-        c_random_effects$`state:site`[paste0(state, "_", site), "Estimate", "Intercept"]
-      c_slope <- c_fixed_effects["yr", "Estimate"] + 
-        c_random_effects$state[state, "Estimate", "yr"] +
-        c_random_effects$`state:site`[paste0(state, "_", site), "Estimate", "yr"]
-    
+      if (state != "ON") {
+        c_intercept <- c_fixed_effects["Intercept", "Estimate"] + 
+          c_random_effects$state[state, "Estimate", "Intercept"] +
+          c_random_effects$`state:site`[paste0(state, "_", site), "Estimate", "Intercept"]
+        c_slope <- c_fixed_effects["yr", "Estimate"] + 
+          c_random_effects$state[state, "Estimate", "yr"] +
+          c_random_effects$`state:site`[paste0(state, "_", site), "Estimate", "yr"]
+      }
       # Add credibility interval for the trend lines ----
       #polygon()
       
@@ -156,9 +161,11 @@ for (state in c("ME", "MA", "NH", "NY", "VT", "MN")){
       abline(a = o_intercept, b = o_slope, 
              col = ifelse(site == "NA", "black", "darkgray"),
              lwd = 2, lty = 2)
-      abline(a = c_intercept, b = c_slope, 
-             col = ifelse(site == "NA", "black", "darkgray"),
-             lwd = 2, lty = 1)
+      if (state != "ON") {
+        abline(a = c_intercept, b = c_slope, 
+               col = ifelse(site == "NA", "black", "darkgray"),
+               lwd = 2, lty = 1)
+      }
     } 
     
     # Plot first boil dates for VTH, VTC, and STJ ----
@@ -178,6 +185,41 @@ for (state in c("ME", "MA", "NH", "NY", "VT", "MN")){
     
   } # End site loop  
 } # End loop over states
+
+
+# Plot change in season close versus latitude ----
+# TR - Add change for individual sites into the graphic
+par(mar = c (5, 6, 1, 1), mfrow = c(2, 1))
+plot(x = d %>% group_by(state) %>% summarise(m_lat = mean(m_lat)) %>% 
+       filter (state %in% c("MA", "ME", "MN", "NH", "NY", "VT")) %>% 
+       select(m_lat) %>% unlist(),
+     y = c_random_effects$state[, "Estimate", "yr"],
+     pch = 19, axes = FALSE, xlim = c(42, 52), ylim = c (-0.0015, 0.0025),
+     xlab = expression(paste("Latitude (",degree,")")),
+     ylab = "")
+mtext(side = 2, line = 4, text = "Change in season close")
+axis(side = 1, at = seq(42, 52, by = 2))
+axis(side = 2, las = 1)
+abline(lm(c_random_effects$state[, "Estimate", "yr"] ~ 
+            d %>% group_by(state) %>% summarise(m_lat = mean(m_lat)) %>% 
+            filter (state %in% c("MA", "ME", "MN", "NH", "NY", "VT")) %>% 
+            select(m_lat) %>% unlist()))
+# Plot change in season open versus latitude ----
+plot(x = d %>% group_by(state) %>% summarise(m_lat = mean(m_lat)) %>% 
+       filter (state != "PA") %>% select(m_lat) %>% unlist(),
+     y = o_random_effects$state[, "Estimate", "yr"],
+     pch = 19, axes = FALSE, xlim = c(42, 52), ylim = c (-0.0015, 0.0025),
+     xlab = expression(paste("Latitude (",degree,")")),
+     ylab = "")
+mtext(side = 2, line = 4, text = "Change in season open")
+axis(side = 1, at = seq(42, 52, by = 2))
+axis(side = 2, las = 1)
+abline(lm(o_random_effects$state[, "Estimate", "yr"] ~ 
+            d %>% group_by(state) %>% 
+            summarise(m_lat = mean(m_lat)) %>% 
+            filter (state != "PA") %>% select(m_lat) %>% unlist()))
+
+
 
 # TR - Started plotting the credibility intervals below ----
 

@@ -5,20 +5,18 @@
 # To-do: ----
 # TR - Add data from Quebec (PPAQ survey from 1999 to 2011)
 #.    - TR Contact DAniel Houle and Louis Duchesne on season open and close
-# TR - Add data from Ontario (S Canadian Forest Service)
-#     - TR Robert Sajan (Natural Resources Canada) and Brian Craig (Environment Canada)
 
 # Load dependencies ----
 if(!existsFunction("%≥%")) library("tidyverse")
 if(!existsFunction("read_excel")) library("readxl")
 
 # Read NASS data for the individual states ----
-file_name <- "Tapping season data.xlsx"
+file_name <- "Sugaring season data.xlsx"
 d <- read_excel(path = paste0("./data/", file_name),
              sheet = "Data",
              col_names = c("yr", "o_ME", "c_ME", "o_MA", "c_MA", "o_NH", "c_NH", 
                            "o_VT", "c_VT", "o_NY", "c_NY", "y_VT", "b_VTC",
-                           "o_VTH", "b_VTH", "c_VTH", "t_VTH"),
+                           "o_VTH", "b_VTH", "c_VTH", "t_VTH", "o_ON"),
              skip = 6,
              na = "NA") %>%
     pivot_longer(cols = -yr,     
@@ -56,7 +54,8 @@ d <- d %>% mutate(m_lat = case_when(
     state == "PA" ~ 40.87,
     state == "VT" ~ 43.93,
     state == "VTC" ~ 43.94,
-    state == "VTH" ~ 43.94),
+    state == "VTH" ~ 43.94,
+    state == "ON" ~ 51.25),
   n_lat = case_when(
     state == "ME" & yr <= 1999 ~ 45.00, # Before 1999 they only included southern Maine # TR - Needs to be adjusted
     state == "ME" & yr >  1999 ~ 47.46,
@@ -66,7 +65,8 @@ d <- d %>% mutate(m_lat = case_when(
     state == "PA" ~ 42.27,
     state == "VT" ~ 45.02,
     state == "VTC" ~ 43.94,
-    state == "VTH" ~ 43.94),
+    state == "VTH" ~ 43.94,
+    state == "ON" ~ 56.85),
   s_lat = case_when(
     state == "ME" & yr <= 1999 ~ 45.25, # Before 1999 they only included southern Maine # TR - Needs to be adjusted
     state == "ME" & yr >  1999 ~ 42.96,
@@ -76,12 +76,14 @@ d <- d %>% mutate(m_lat = case_when(
     state == "PA" ~ 39.72,
     state == "VT" ~ 42.73,
     state == "VTC" ~ 43.94,
-    state == "VTH" ~ 43.94)) 
+    state == "VTH" ~ 43.94,
+    state == "ON" ~ 41.69)) 
 
 # Add a weights column to give more importance to NASS state-averages ----
 d <- d %>% mutate(w = case_when(
   state == "VTC" ~ 1, 
   state == "VTH" ~ 1,
+  state == "ON" ~ 9,
   state != "VTC" & state != "VTH" ~ 100, # TR - Ought to change this to number of responses per state. I assume that this is based on an n = 100 per state.
 ))
 
