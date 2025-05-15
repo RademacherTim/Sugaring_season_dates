@@ -4,7 +4,9 @@
 
 # To-do: ----
 # TR - Add data from Quebec (PPAQ survey from 1999 to 2011)
+#.    - TR Contact DAniel Houle and Louis Duchesne on season open and close
 # TR - Add data from Ontario (S Canadian Forest Service)
+#     - TR Robert Sajan (Natural Resources Canada) and Brian Craig (Environment Canada)
 
 # Load dependencies ----
 if(!existsFunction("%≥%")) library("tidyverse")

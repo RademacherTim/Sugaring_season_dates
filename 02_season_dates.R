@@ -2,12 +2,13 @@
 # Script to analyze and plot the beginning and end of season dates
 #-------------------------------------------------------------------------------
 
-# To-do: ---- 
+# To-do: ------------ 
 # - TR Something is wrong with the linear trend line for the VTH historic first boil data. The intercept is way to high.
 # - TR Add change in size of operation to analysis (requires appropriate data)
 #         - TR Census of Ag should have this data
 # - TR Add credible interval for the data
 # - TR Add uncertainty for the statewide data, if I can get hold of standard deviation
+# - TR Do a break-point analysis and fit linear trends to to the decline and increase
 
 # Load dependencies ----
 if(!existsFunction("brms")) library("brms") 
