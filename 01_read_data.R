@@ -43,7 +43,7 @@ rm(d_PA)
 # N.B.: Before 1999 only southern Maine was included in the NASS data and since 
 # 1999 all of Maine is included.
 d <- d %>% mutate(m_lat = case_when(
-    state == "ME" & yr <= 1999 ~ 45.25, # Before 1999 they only included southern Maine # TR - Needs to be adjusted
+    state == "ME" & yr <= 1999 ~ 44.64, # Before 1999 they only included southern Maine # TR - This is just a guess
     state == "ME" & yr >  1999 ~ 45.25, # TR - Needs to change
     state == "MA" ~ 42.34,
     state == "NH" ~ 43.68,
@@ -54,7 +54,7 @@ d <- d %>% mutate(m_lat = case_when(
     state == "VTH" ~ 43.94,
     state == "ON" ~ 51.25),
   n_lat = case_when(
-    state == "ME" & yr <= 1999 ~ 45.00, # Before 1999 they only included southern Maine # TR - Needs to be adjusted
+    state == "ME" & yr <= 1999 ~ 45.10, # Before 1999 they only included southern Maine # TR - This is just a guess
     state == "ME" & yr >  1999 ~ 47.46,
     state == "MA" ~ 42.88,
     state == "NH" ~ 45.30,
@@ -65,7 +65,7 @@ d <- d %>% mutate(m_lat = case_when(
     state == "VTH" ~ 43.94,
     state == "ON" ~ 56.85),
   s_lat = case_when(
-    state == "ME" & yr <= 1999 ~ 45.25, # Before 1999 they only included southern Maine # TR - Needs to be adjusted
+    state == "ME" & yr <= 1999 ~ 42.96, # Before 1999 they only included southern Maine 
     state == "ME" & yr >  1999 ~ 42.96,
     state == "MA" ~ 41.23,
     state == "NH" ~ 42.70,
@@ -96,6 +96,26 @@ d <- d %>% mutate(site = case_when(
     state == "VT" & site == "NA" ~ "NASS",
     state %in% c("VTH", "VTC") ~ "IND"))
 d$state[d$site %in% c("VTC", "VTH")] <- "VT"
+
+# Read in NASS census data ----
+d_census <- read_csv(file = "./data/D25B89FB-A611-3258-B8AD-AB089064EE13.csv",
+                     col_names = c("source", "yr", "Period", "week", "Geo Level", 
+                                   "state", "State ANSI", "Ag District", 
+                                   "Ag District Code", "county", "County ANSI", 
+                                   "Zip Code", "Region", "watershed_code", 
+                                   "Watershed", "Commodity", "Data Item", 
+                                   "Domain", "Domain Category", "Value", 
+                                   "CV"),
+                     col_types = cols(), skip = 1) %>% 
+  dplyr::select(-c(Period, week, `State ANSI`, `Ag District`, 
+                   `Ag District Code`, `County ANSI`, Region, 
+                   watershed_code, Watershed, Commodity)) %>%
+  dplyr::filter(state %in% c("MAINE", "MASSACHUSETTS", "MINNESOTA", 
+                             "NEW HAMPSHIRE", "NEW YORK", "PENNSYLVANIA", 
+                             "VERMONT")) %>%
+  mutate(Value = ifelse(Value == "(D)" | Value == "(L)" | Value == "(Z)", NA, Value)) %>% 
+  mutate(value = parse_number(Value)) %>% 
+  select(-Value)
 
 # Read St. John's data ----
 file_name <- "Data_St_Johns_All.xlsx"
