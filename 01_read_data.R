@@ -26,9 +26,6 @@ d <- read_excel(path = paste0("./data/", file_name),
          c_date = as_date(c - 1, origin = paste0(yr, "-01-01")),
          b_date = as_date(b - 1, origin = paste0(yr, "-01-01")),
          d = c-o)
-  
-# Set yield to NA for all states except Vermont, for which this data is ----
-d$y[d$state != "VT"] <- NA
 
 # Read the Pennsylvania (PA) data for season duration ----
 file_name <- "PA Season Duration - NASS.xlsx"
@@ -87,12 +84,17 @@ d <- d %>% mutate(w = case_when(
   state != "VTC" & state != "VTH" ~ 100, # TR - Ought to change this to number of responses per state. I assume that this is based on an n = 100 per state.
 ))
 
-# Add column for sites within states ----
+# Add column for sites within states and source of the data ----
 d <- d %>% mutate(site = case_when(
   state == "VTC" ~ "VTC",
   state == "VTH" ~ "VTH",
   state != "VTC" & state != "VTH" ~ "NA",
-)) 
+  state %in% c("MA", "ME", "NH", "NY", "ON", "PA") ~ "NA"),
+  source = case_when(
+    state %in% c("MA", "ME", "NH", "NY", "PA") ~ "NASS",
+    state == "ON" ~ "CFS",
+    state == "VT" & site == "NA" ~ "NASS",
+    state %in% c("VTH", "VTC") ~ "IND"))
 d$state[d$site %in% c("VTC", "VTH")] <- "VT"
 
 # Read St. John's data ----
@@ -115,7 +117,7 @@ d_StJ <- read_excel(path = paste0("./data/", file_name),
                                   "brix+1", "yield+1"),
                     range = "A5:AR87", 
                     na = "NA") %>%
-  select(-WWW, -XXX, -YYY, -ZZZ, -AAA, -BBB, -CCC, -DDD, -EEE)
+  dplyr::select(-c(WWW, XXX, YYY, ZZZ, AAA, BBB, CCC, DDD, EEE))
 
 # Convert StJ data into the d format ----
 d1 <- d_StJ %>% 
@@ -134,8 +136,10 @@ d1 <- d_StJ %>%
          n_lat = 45.58,
          s_lat = 45.56,
          w = 1,
-         site = "STJ") %>%
-  select(yr, state, o, c, y, b, t, o_date, c_date, b_date, d, m_lat, n_lat, s_lat, w, site)
+         site = "STJ",
+         source = "IND") %>%
+  dplyr::select(yr, state, o, c, y, b, t, o_date, c_date, b_date, d, m_lat,
+                n_lat, s_lat, w, site, source)
 
 # Add the Saint John's and Saint Benedict data to the overall data ----
 d <- rbind(d, d1); rm(d1)
@@ -149,7 +153,7 @@ d_StJ_daily <- read_excel(path = paste0("./data/", file_name),
                           range = "A6:CC37",
                           col_names = c("y", "AAA", "BBB", dates, "t_sap", 
                                         "n_days")) %>% 
-  select(-AAA, -BBB, -t_sap, -n_days) %>%
+  dplyr::select(-AAA, -BBB, -t_sap, -n_days) %>%
   pivot_longer(cols = starts_with("0"),
     names_to = "month_day", 
     values_to = "value") %>%
@@ -157,6 +161,6 @@ d_StJ_daily <- read_excel(path = paste0("./data/", file_name),
   slice(-c(91, 167, 243, 319, 471, 623, 775, 927, 1003, 1155, 1231, 1307, 1459, 
            1535, 1611, 1763, 1839, 1915, 2067, 2143, 2219, 2371)) %>% # Filter out 02-29 on non-leap years
   mutate(date = as_date(paste(y, month_day, sep = "-"))) %>%
-  select(-month_day, -y)
+  dplyr::select(-month_day, -y)
   
 #===============================================================================
