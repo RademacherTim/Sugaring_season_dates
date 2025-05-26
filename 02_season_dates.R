@@ -8,7 +8,7 @@
 # - TR Add change in size of operation to analysis (requires appropriate data)
 #         - TR Census of Ag should have this data
 # - TR Add credible interval for the data
-# - TR Add uncertainty for the statewide data, if I can get hold of standard deviation
+# - TR Add uncertainty for the regionwide data, if I can get hold of standard deviation
 # - TR Do a break-point analysis and fit linear trends to to the decline and increase
 # - TR Add season open data from nine operations in Ontario (S Canadian Forest Service; Robert Sajan (Natural Resources Canada) and Brian Craig (Environment Canada))
 #      N.B.: It might be first boil dates rather than season open
@@ -21,20 +21,20 @@ if(!exists("d")) source("01_read_data.R")
 
 # Set the priors ----
 priors <- c(set_prior("normal(0, 1)", class = "b"),  # fixed effects for the trend over time
-            set_prior("normal(0, 1)", class = "sd")) # group-level effects of state and site
+            set_prior("normal(0, 1)", class = "sd")) # group-level effects of region and site
 
 # Model a linear trend for the onset (open), first boil, and end  (close) of 
 # the season ----
-mod_o <- brm(formula = o ~ yr + (yr | state / site),
+mod_o <- brm(formula = o ~ yr + (yr | region / site),
              data = d %>% filter(!is.na(o)), 
              family = gaussian(),
              prior = priors,
-             #weights = d %>% filter(!is.na(o)) %>% select(w) %>% ungroup(), # TR - Need to look more into how to treat state-averages versus site values.
+             #weights = d %>% filter(!is.na(o)) %>% select(w) %>% ungroup(), # TR - Need to look more into how to treat region-averages versus site values.
              chains = 4, cores = 4, iter = 4000,
              control = list(adapt_delta = 0.95))
 summary(mod_o)
 plot(mod_o)
-mod_c <- brm(formula = c ~ yr + (yr | state / site),
+mod_c <- brm(formula = c ~ yr + (yr | region / site),
              data = d %>% filter(!is.na(c)), 
              family = gaussian(),
              prior = priors,
@@ -42,7 +42,7 @@ mod_c <- brm(formula = c ~ yr + (yr | state / site),
              control = list(adapt_delta = 0.95))
 summary(mod_c)
 plot(mod_c)
-mod_b <- brm(formula = b ~ yr + (yr | state / site), 
+mod_b <- brm(formula = b ~ yr + (yr | region / site), 
              data = d %>% filter(!is.na(b)), 
              family = gaussian(),
              prior = priors,
@@ -53,14 +53,15 @@ plot(mod_b)
 
 # Extract fixed effects and random effects ----
 o_fixed_effects <- fixef(mod_o)  # Fixed effects (intercept and slope)
-o_random_effects <- ranef(mod_o)  # Random effects by group (state)
+o_random_effects <- ranef(mod_o)  # Random effects by group (region)
 c_fixed_effects <- fixef(mod_c)  # Fixed effects (intercept and slope)
-c_random_effects <- ranef(mod_c)  # Random effects by group (state)
+c_random_effects <- ranef(mod_c)  # Random effects by group (region)
 b_fixed_effects <- fixef(mod_b)  # Fixed effects (intercept and slope)
-b_random_effects <- ranef(mod_b)  # Random effects by group (state)
+b_random_effects <- ranef(mod_b)  # Random effects by group (region)
 
 # Plot NASS data for Massachusetts, Maine, New Hampshire, Vermont, New York, 
-# and Pennsylvania ----
+# and Pennsylvania plus individual site data from Minnesota and Vermont, as 
+# well as the Ontario data from CFS and OMSPA ----- 
 
 # Define the layout matrix
 layout_matrix <- matrix(c(1, 2, 3, 4, 5, 5, 6, 7, 8), nrow = 3, byrow = TRUE)
@@ -71,154 +72,185 @@ layout(layout_matrix, widths = c(1, 1, 1, 1, 2, 1, 1, 1), heights = c(1, 1, 1))
 # Set plot margins ----
 par(mar = c(5, 5, 1, 1))
 
-# Loop over states, as there is one plot per state ----
-for (state in c("ME", "MA", "NH", "NY", "VT", "MN", "ON")){
+# Loop over regions, as there is one plot per region ----
+for (region in c("ME", "MA", "NH", "NY", "VT", "MN", "CFS", "OMSPA")){
   
-  # Determine if there are individual sites in a state (NA for state-wide averages)
-  if (state != "VT" & state != "MN") {
+  # Determine if there are individual sites in a region (NA for region-wide averages)
+  if (region != "VT" & region != "MN") {
     sites <- "NA"
-  } else if (state == "VT") {
+  } else if (region == "VT") {
     sites <- c("NA", "VTH", "VTC")
-  } else if (state == "MN") {
+  } else if (region == "MN") {
     sites <- "STJ"
   }
   
-  # Loop over individual sites in each state ----
+  # Loop over individual sites in each region ----
   for (site in sites) {
-    if(state != "VT" | (state == "VT" & site == "NA")) {
-      plot(x = d$yr[d$state == state & d$site == site], 
-           y = d$o[d$state == state & d$site == site], 
+    if ((region != "VT" & region != "OMSPA") | (region == "VT" & site == "NA")) {
+      plot(x = d$yr[d$region == region & d$site == site], 
+           y = d$o[d$region == region & d$site == site], 
            pch = 21, lwd = 1.5, col = ifelse(site == "NA", "black", "darkgray"),
-           xlim = c(ifelse(state != "VT", ifelse(state != "MN", 1960, 1940), 1870), 2023), 
+           xlim = c(ifelse(region != "VT", ifelse(region != "MN", 1960, 1940), 1870), 2023), 
            ylim = c(30, 150),
            axes = FALSE, 
            xlab = "Year", ylab = "Day of the year")
       text(x = 2025, y = 140, adj = 1, pos = 2,
            label = case_when(
-             state == "MA" ~ "Massachusetts",
-             state == "ME" ~ "Maine",
-             state == "NH" ~ "New Hampshire",
-             state == "NY" ~ "New York",
-             state == "VT" ~ "Vermont",
-             state == "PA" ~ "Pensylvannia",
-             state == "MN" ~ "Minnesota",
-             state == "ON" ~ "Ontario"))
-      if (state == "MN") {
+             region == "MA" ~ "Massachusetts",
+             region == "ME" ~ "Maine",
+             region == "NH" ~ "New Hampshire",
+             region == "NY" ~ "New York",
+             region == "VT" ~ "Vermont",
+             region == "PA" ~ "Pensylvannia",
+             region == "MN" ~ "Minnesota",
+             region == "CFS" ~ "Ontario"))
+      if (region == "MN") {
         x_ats <- seq(1940, 2020, by = 10)
-      } else if (state != "VT") {
+      } else if (region != "VT") {
         x_ats <- seq(1960, 2020, by = 10)
       } else {
         x_ats <- seq(1880, 2020, by = 20)
       }
       axis(side = 1, at = x_ats)
       axis(side = 2, las = 1)
-      points(x = d$yr[d$state == state & d$site == site], 
-             y = d$c[d$state == state & d$site == site], 
+      points(x = d$yr[d$region == region & d$site == site], 
+             y = d$c[d$region == region & d$site == site], 
              pch = 19, lwd = 1.5, col = ifelse(site == "NA", "black", "darkgray"))
-      if (site == "STJ") {
-        points(x = d$yr[d$state == state & d$site == site], 
-               y = d$b[d$state == state & d$site == site], 
+      if (site == "STJ" | region == "CFS") {
+        points(x = d$yr[d$region == region & d$site == site], 
+               y = d$b[d$region == region & d$site == site], 
                pch = 4, lwd = 1.5, col = "darkgray")
       }
-    } else if (state == "VT" & site == "VTH") {
-      points(x = d$yr[d$state == state & d$site == site], 
-             y = d$o[d$state == state & d$site == site], 
+    } else if (region == "VT" & site == "VTH") {
+      points(x = d$yr[d$region == region & d$site == site], 
+             y = d$o[d$region == region & d$site == site], 
              pch = 24, lwd = 1.5, col = "darkgray")
-      points(x = d$yr[d$state == state & d$site == site], 
-             y = d$c[d$state == state & d$site == site], 
+      points(x = d$yr[d$region == region & d$site == site], 
+             y = d$c[d$region == region & d$site == site], 
              pch = 25, lwd = 1.5, col = "darkgray", bg = "darkgray")
-      points(x = d$yr[d$state == state & d$site == site], 
-             y = d$b[d$state == state & d$site == site], 
+      points(x = d$yr[d$region == region & d$site == site], 
+             y = d$b[d$region == region & d$site == site], 
              pch = 4, lwd = 1.5, col = "#FFD416")
-    } else if (state == "VT" & site == "VTC") {
-      points(x = d$yr[d$state == state & d$site == site], 
-             y = d$b[d$state == state & d$site == site], 
+    } else if (region == "VT" & site == "VTC") {
+      points(x = d$yr[d$region == region & d$site == site], 
+             y = d$b[d$region == region & d$site == site], 
              pch = 4, lwd = 1.5, col = "#154734")
+    } else if (region == "OMSPA") {
+      points(x = d$yr[d$region == region & d$site == site], 
+             y = d$b[d$region == region & d$site == site], 
+             pch = 4, lwd = 1.5, col = "black")
+      points(x = d$yr[d$region == region & d$site == site], 
+             y = d$c[d$region == region & d$site == site], 
+             pch = 25, lwd = 1.5, col = "black")
     }
     
     # Plot open and close for all sites except for VTC ----
-    if (site != "VTC") {
+    if (site != "VTC" & region != "CFS") {
       
-      # Calculate the intercept and slope for the chosen state
+      # Calculate the intercept and slope for the chosen region
       o_intercept <- o_fixed_effects["Intercept", "Estimate"] + 
-        o_random_effects$state[state, "Estimate", "Intercept"] +
-        o_random_effects$`state:site`[paste0(state, "_", site), "Estimate", "Intercept"]
+        o_random_effects$region[region, "Estimate", "Intercept"] +
+        o_random_effects$`region:site`[paste0(region, "_", site), "Estimate", "Intercept"]
+  
       o_slope <- o_fixed_effects["yr", "Estimate"] + 
-        o_random_effects$state[state, "Estimate", "yr"] +
-        o_random_effects$`state:site`[paste0(state, "_", site), "Estimate", "yr"]
-      if (state != "ON") {
-        c_intercept <- c_fixed_effects["Intercept", "Estimate"] + 
-          c_random_effects$state[state, "Estimate", "Intercept"] +
-          c_random_effects$`state:site`[paste0(state, "_", site), "Estimate", "Intercept"]
-        c_slope <- c_fixed_effects["yr", "Estimate"] + 
-          c_random_effects$state[state, "Estimate", "yr"] +
-          c_random_effects$`state:site`[paste0(state, "_", site), "Estimate", "yr"]
-      }
+        o_random_effects$region[region, "Estimate", "yr"] +
+        o_random_effects$`region:site`[paste0(region, "_", site), "Estimate", "yr"]
+
+      c_intercept <- c_fixed_effects["Intercept", "Estimate"] + 
+        c_random_effects$region[region, "Estimate", "Intercept"] +
+        c_random_effects$`region:site`[paste0(region, "_", site), "Estimate", "Intercept"]
+
+      c_slope <- c_fixed_effects["yr", "Estimate"] + 
+        c_random_effects$region[region, "Estimate", "yr"] +
+        c_random_effects$`region:site`[paste0(region, "_", site), "Estimate", "yr"]
       # Add credibility interval for the trend lines ----
       #polygon()
-      
       # Add the linear trends for beginning and end of the season ----
       abline(a = o_intercept, b = o_slope, 
+           col = ifelse(site == "NA", "black", "darkgray"),
+           lwd = 2, lty = 2)
+      abline(a = c_intercept, b = c_slope, 
              col = ifelse(site == "NA", "black", "darkgray"),
-             lwd = 2, lty = 2)
-      if (state != "ON") {
-        abline(a = c_intercept, b = c_slope, 
-               col = ifelse(site == "NA", "black", "darkgray"),
-               lwd = 2, lty = 1)
-      }
-    } 
+             lwd = 2, lty = 1)
+    } # End site != VTC & region != "CFS" condition 
     
     # Plot first boil dates for VTH, VTC, and STJ ----
-    if (site %in% c("VTH", "VTC", "STJ")) {
+    if (site %in% c("VTH", "VTC", "STJ") | region == "CFS" | region == "OMSPA") {
       b_intercept <- b_fixed_effects["Intercept", "Estimate"] + 
-        b_random_effects$state[state, "Estimate", "Intercept"] + 
-        b_random_effects$`state:site`[paste0(state,"_",site), "Estimate", "Intercept"]
+        b_random_effects$region[region, "Estimate", "Intercept"] + 
+        b_random_effects$`region:site`[paste0(region,"_",site), "Estimate", "Intercept"]
       b_slope <- b_fixed_effects["yr", "Estimate"] + 
-        b_random_effects$state[state, "Estimate", "yr"] + 
-        b_random_effects$`state:site`[paste0(state,"_",site), "Estimate", "yr"]
+        b_random_effects$region[region, "Estimate", "yr"] + 
+        b_random_effects$`region:site`[paste0(region,"_",site), "Estimate", "yr"]
       
       # Add the linear trends for first boil of the season ----
       abline(a = b_intercept, b = b_slope, 
-             col = ifelse(site == "VTC", "#154734", ifelse(site == "VTH", "#FFD416", "darkgray")),
+             col = ifelse(site == "VTC", "#154734", 
+                          ifelse(site == "VTH", "#FFD416", 
+                                 ifelse (region == "CFS", "darkgray", "black"))),
              lwd = 2, lty = 3)
     } 
     
   } # End site loop  
-} # End loop over states
+} # End loop over regions
 
 
-# Plot change in season close versus latitude ----
 # TR - Add change for individual sites into the graphic
-par(mar = c (5, 6, 1, 1), mfrow = c(2, 1))
-plot(x = d %>% group_by(state) %>% summarise(m_lat = mean(m_lat)) %>% 
-       filter (state %in% c("MA", "ME", "MN", "NH", "NY", "VT")) %>% 
+# Plot change in season close versus latitude ----
+par(mar = c (5, 6, 1, 1), mfrow = c(3, 1))
+plot(x = d %>% group_by(region) %>% summarise(m_lat = mean(m_lat)) %>% 
+       filter (region %in% c("AL", "AQ", "EA", "GB", "HK", "LA", "MA", "ME", 
+                             "MN", "NH", "NY", "OMSPA", "OV", "QI", "SI", "SW",
+                             "VT", "WW")) %>% 
        select(m_lat) %>% unlist(),
-     y = c_random_effects$state[, "Estimate", "yr"],
-     pch = 19, axes = FALSE, xlim = c(42, 52), ylim = c (-0.0015, 0.0025),
+     y = c_random_effects$region[, "Estimate", "yr"],
+     pch = 19, axes = FALSE, xlim = c(42, 49), ylim = c (-0.0015, 0.0025),
      xlab = expression(paste("Latitude (",degree,")")),
      ylab = "")
-mtext(side = 2, line = 4, text = "Change in season close")
+mtext(side = 2, line = 4, text = expression(beta[close]))
 axis(side = 1, at = seq(42, 52, by = 2))
 axis(side = 2, las = 1)
-abline(lm(c_random_effects$state[, "Estimate", "yr"] ~ 
-            d %>% group_by(state) %>% summarise(m_lat = mean(m_lat)) %>% 
-            filter (state %in% c("MA", "ME", "MN", "NH", "NY", "VT")) %>% 
+abline(lm(c_random_effects$region[, "Estimate", "yr"] ~ 
+            d %>% group_by(region) %>% summarise(m_lat = mean(m_lat)) %>% 
+            filter (region %in% c("AL", "AQ", "EA", "GB", "HK", "LA", "MA", "ME", 
+                                  "MN", "NH", "NY", "OMSPA", "OV", "QI", "SI", "SW",
+                                  "VT", "WW")) %>% 
             select(m_lat) %>% unlist()))
+
+# Plot change in first boil versus latitude ----
+plot(x = d %>% group_by(region) %>% summarise(m_lat = mean(m_lat)) %>% 
+       filter (region %in% c("AL", "AQ", "CFS", "EA", "GB", "HK", "LA", "MN", 
+                             "OMSPA", "OV", "QI", "SI", "SW", "VT", "WW")) %>% 
+       select(m_lat) %>% unlist(),
+     y = b_random_effects$region[, "Estimate", "yr"],
+     pch = 19, axes = FALSE, xlim = c(42, 49), ylim = c (-0.0015, 0.0025),
+     xlab = expression(paste("Latitude (",degree,")")),
+     ylab = "")
+mtext(side = 2, line = 4, text = expression(beta[boil]))
+axis(side = 1, at = seq(42, 52, by = 2))
+axis(side = 2, las = 1)
+abline(lm(b_random_effects$region[, "Estimate", "yr"] ~ 
+            d %>% group_by(region) %>% summarise(m_lat = mean(m_lat)) %>% 
+            filter (region %in% c("AL", "AQ", "CFS", "EA", "GB", "HK", "LA", "MN", 
+                                  "OMSPA", "OV", "QI", "SI", "SW", "VT", "WW")) %>% 
+            select(m_lat) %>% unlist()))
+
 # Plot change in season open versus latitude ----
-plot(x = d %>% group_by(state) %>% summarise(m_lat = mean(m_lat)) %>% 
-       filter (state != "PA") %>% select(m_lat) %>% unlist(),
-     y = o_random_effects$state[, "Estimate", "yr"],
+plot(x = d %>% group_by(region) %>% summarise(m_lat = mean(m_lat)) %>% 
+       filter (region %in% c("MA", "ME", "MN", "NH", "NY", "VT")) %>% 
+       select(m_lat) %>% unlist(),
+     y = o_random_effects$region[, "Estimate", "yr"],
      pch = 19, axes = FALSE, xlim = c(42, 52), ylim = c (-0.0015, 0.0025),
      xlab = expression(paste("Latitude (",degree,")")),
      ylab = "")
-mtext(side = 2, line = 4, text = "Change in season open")
+mtext(side = 2, line = 4, text = expression(beta[open]))
 axis(side = 1, at = seq(42, 52, by = 2))
 axis(side = 2, las = 1)
-abline(lm(o_random_effects$state[, "Estimate", "yr"] ~ 
-            d %>% group_by(state) %>% 
+abline(lm(o_random_effects$region[, "Estimate", "yr"] ~ 
+            d %>% group_by(region) %>% 
             summarise(m_lat = mean(m_lat)) %>% 
-            filter (state != "PA") %>% select(m_lat) %>% unlist()))
-
+            filter (region %in% c("MA", "ME", "MN", "NH", "NY", "VT")) %>% 
+            select(m_lat) %>% unlist()))
 
 
 # TR - Started plotting the credibility intervals below ----
@@ -229,7 +261,7 @@ posterior_samples <- as_draws(mod_o)
 # Create a new data frame for predictions
 new_data <- tibble(
   yr = rep(1873:2023, 6),
-  state = c(rep(c("ME", "MA", "NH", "NY"), each = 151), rep("VT", 2 * 151)),
+  region = c(rep(c("ME", "MA", "NH", "NY"), each = 151), rep("VT", 2 * 151)),
   site = c(rep("NA", 5 * 151), rep("VTH", 151)))
 
 # Generate posterior predictions

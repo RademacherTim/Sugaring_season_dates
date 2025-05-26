@@ -9,7 +9,7 @@ if(!existsFunction("brms")) library("brms")
 if(!exists("d")) source("01_read_data.R")
 
 # Model a linear trend for the onset and end of season ----
-mod_d <- brm(formula = d ~ yr + (yr | state / site),
+mod_d <- brm(formula = d ~ yr + (yr | region / site),
              data = d %>% filter(!is.na(d)), 
              family = gaussian(),
              chains = 4, cores = 4, iter = 4000,
@@ -19,79 +19,81 @@ plot(mod_d)
 
 # Extract fixed effects and random effects ----
 d_fixed_effects <- fixef(mod_d)  # Fixed effects (intercept and slope)
-d_random_effects <- ranef(mod_d)  # Random effects by group (state)
+d_random_effects <- ranef(mod_d)  # Random effects by group (region)
 
 # Plot NASS data for Massachusetts, Maine, New Hampshire, Vermont, New York, 
-# and Pennsylvania ----
-par(mfrow = c(2, 3), mar = c(5, 5, 1, 1))
-for (state in c("ME", "MA", "NH", "NY", "PA", "VT", "MN")){
+# and Pennsylvania as well as individual site data from Minnesota ----
+par(mfrow = c(3, 3), mar = c(5, 5, 1, 1))
+for (region in c("ME", "MA", "NH", "NY", "PA", "VT", "MN")){
   
-  # Determine if there are individual sites in a state (NA for state-wide averages)
-  if (state == "MN") {
+  # Determine if there are individual sites in a region (NA for region-wide averages)
+  if (region == "MN") {
     sites <- "STJ"
-  } else if (state != "VT") {
+  } else if (region != "VT") {
     sites <- "NA"
   } else {
     sites <- c("NA", "VTH")
   }
   
-  # Loop over individual sites in each state ----
+  # Loop over individual sites in each region ----
   for (site in sites) {
-    if(state != "VT" | (state == "VT" & site == "NA")) {
-      plot(x = d$yr[d$state == state & d$site == site], 
-           y = d$d[d$state == state & d$site == site], 
+    if(region != "VT" | (region == "VT" & site == "NA")) {
+      plot(x = d$yr[d$region == region & d$site == site], 
+           y = d$d[d$region == region & d$site == site], 
            pch = ifelse(site == "NA", 19, 23), 
            lwd = 1.5, 
            col = ifelse(site == "NA", "black", "darkgray"),
-           xlim = c(ifelse(state != "VT", 1960, 1870), 2025), 
+           xlim = c(ifelse(region != "VT", 1960, 1870), 2025), 
            ylim = c(10, 60),
            axes = FALSE, xlab = "Year", ylab = "Duration (sdays)")
       text(x = 2020, y = 60, adj = 1, pos = 2,
            label = case_when(
-             state == "MA" ~ "Massachusetts",
-             state == "ME" ~ "Maine",
-             state == "NH" ~ "New Hampshire",
-             state == "NY" ~ "New York",
-             state == "VT" ~ "Vermont",
-             state == "PA" ~ "Pensylvannia",
-             state == "MN" ~ "Minnesota"))
-      if (state != "VT") {
+             region == "MA" ~ "Massachusetts",
+             region == "ME" ~ "Maine",
+             region == "NH" ~ "New Hampshire",
+             region == "NY" ~ "New York",
+             region == "VT" ~ "Vermont",
+             region == "PA" ~ "Pensylvannia",
+             region == "MN" ~ "Minnesota"))
+      if (region != "VT") {
         x_ats <- seq(1960, 2020, by = 10)
       } else {
         x_ats <- seq(1880, 2020, by = 20)
       }
       axis(side = 1, at = x_ats)
       axis(side = 2, las = 1)
-    } else if (state == "VT" & site == "VTH") {
-      points(x = d$yr[d$state == state & d$site == site], 
-             y = d$d[d$state == state & d$site == site], 
+    } else if (region == "VT" & site == "VTH") {
+      points(x = d$yr[d$region == region & d$site == site], 
+             y = d$d[d$region == region & d$site == site], 
              pch = 23, lwd = 1.5, col = "darkgray")
     }
   
   
-    # Calculate the intercept and slope for the chosen state
-    d_state_intercept <- d_fixed_effects["Intercept", "Estimate"] + 
-      d_random_effects$state[state, "Estimate", "Intercept"] +
-      d_random_effects$`state:site`[paste0(state, "_", site), "Estimate", "Intercept"]
-    d_state_slope <- d_fixed_effects["yr", "Estimate"] + 
-      d_random_effects$state[state, "Estimate", "yr"] +
-      d_random_effects$`state:site`[paste0(state, "_", site), "Estimate", "yr"]
+    # Calculate the intercept and slope for the chosen region
+    d_region_intercept <- d_fixed_effects["Intercept", "Estimate"] + 
+      d_random_effects$region[region, "Estimate", "Intercept"] +
+      d_random_effects$`region:site`[paste0(region, "_", site), "Estimate", "Intercept"]
+    d_region_slope <- d_fixed_effects["yr", "Estimate"] + 
+      d_random_effects$region[region, "Estimate", "yr"] +
+      d_random_effects$`region:site`[paste0(region, "_", site), "Estimate", "yr"]
       
     # Add the linear trends for beginning and end of the season ----
-    abline(a = d_state_intercept, b = d_state_slope, 
+    abline(a = d_region_intercept, b = d_region_slope, 
            col = ifelse(site == "NA", "black", "darkgray"), 
            lwd = 2, lty = 1)
     
   } # End site loop
-} # End loop over states
+} # End loop over regions
 
 # Plot change in season duration versus latitude ----
 par(mar = c (5, 5, 1, 1), mfrow = c(1, 1))
-plot(x = d %>% group_by(state) %>% summarise(m_lat = mean(m_lat)) %>% filter(state != "ON") %>% select(m_lat) %>% unlist(),
-     y = d_random_effects$state[, "Estimate", "yr"],
+plot(x = d %>% group_by(region) %>% summarise(m_lat = mean(m_lat)) %>% 
+       filter(region %in% c("MA" ,"ME" ,"MN" ,"NH" ,"NY" ,"PA" ,"VT")) %>% 
+       select(m_lat) %>% unlist(),
+     y = d_random_effects$region[, "Estimate", "yr"],
      pch = 19, axes = FALSE,
      xlab = expression(paste("Latitude (",degree,")")),
-     ylab = "Change in duration (days)")
+     ylab = expression(beta[duration]))
 axis(side = 1)
 axis(side = 2, las = 1)
 

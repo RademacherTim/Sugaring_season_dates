@@ -2,6 +2,9 @@
 # Script to plot the beginning and end of season dates
 #-------------------------------------------------------------------------------
 
+# TR - Rename state to region 
+# TR - Add OMSPA data to graph 
+
 # Load dependencies ----
 if(!existsFunction("brms")) library("brms") 
 
@@ -38,16 +41,16 @@ y_random_effects <- ranef(mod_y)  # Random effects by group (state)
 
 # Plot duration of the season versus the yield ----
 par(mfrow = c(1, 1))
-plot (x = d$d[d$state == "VT"],
-      y = d$y[d$state == "VT"],
+plot (x = d$d[d$region == "VT"],
+      y = d$y[d$region == "VT"],
       pch = 19, col = "#154734", cex = 1.2,
       axes = FALSE, xlim = c(0, 65), ylim = c(0, 0.45),
       xlab = "Season duration (days)",
       ylab = "Average yield (gal / tap)")
 axis(side = 1)
 axis(side = 2, las = 1)
-points(x = d$d[d$state == "MN"],
-       y = d$y[d$state == "MN"],
+points(x = d$d[d$region == "MN"],
+       y = d$y[d$region == "MN"],
        pch = 19, col = "#cd1041")
 
 # Add the linear relationship for VT ----
@@ -68,30 +71,30 @@ abline(a = y_intercept, b = y_slope,
 
 # Season open versus yield ----
 par(mfrow = c(1, 1))
-plot (x = d$o[d$state == "VT"],
-      y = d$y[d$state == "VT"],
+plot (x = d$o[d$region == "VT"],
+      y = d$y[d$region == "VT"],
       pch = 15, col = "#154734", cex = 1.2,
       axes = FALSE, xlim = c(40, 90), ylim = c(0, 0.45),
       xlab = "Season open (days)",
       ylab = "Average yield (gal / tap)")
 axis(side = 1)
 axis(side = 2, las = 1)
-points(x = d$o[d$state == "MN"],
-       y = d$y[d$state == "MN"],
+points(x = d$o[d$region == "MN"],
+       y = d$y[d$region == "MN"],
        pch = 18, cex = 1.3, col = "#cd1041")
 
 # Season close versus yield ----
 par(mfrow = c(1, 1))
-plot (x = d$c[d$state == "VT"],
-      y = d$y[d$state == "VT"],
+plot (x = d$c[d$region == "VT"],
+      y = d$y[d$region == "VT"],
       pch = 15, col = "#154734", cex = 1.2,
       axes = FALSE, xlim = c(70, 140), ylim = c(0, 0.45),
       xlab = "Season close (days)",
       ylab = "Average yield (gal / tap)")
 axis(side = 1)
 axis(side = 2, las = 1)
-points(x = d$c[d$state == "MN"],
-       y = d$y[d$state == "MN"],
+points(x = d$c[d$region == "MN"],
+       y = d$y[d$region == "MN"],
        pch = 18, cex = 1.3, col = "#cd1041")
 # There might be a positive relationship between season close and yield for STJ
 
