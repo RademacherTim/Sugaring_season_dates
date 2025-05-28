@@ -4,7 +4,7 @@
 
 # To-do: ----
 # TR - Add data from Quebec (PPGB survey from 1999 to 2011)
-#.    - TR Contact DAniel Houle and Louis Duchesne on season open and close
+#.    - TR Contact Daniel Houle and Louis Duchesne on season open and close
 
 # Load dependencies ----
 if(!existsFunction("%≥%")) library("tidyverse")
@@ -170,7 +170,7 @@ d_census <- read_csv(file = "./data/D25B89FB-A611-3258-B8AD-AB089064EE13.csv",
                              "VERMONT")) %>%
   mutate(Value = ifelse(Value == "(D)" | Value == "(L)" | Value == "(Z)", NA, Value)) %>% 
   mutate(value = parse_number(Value)) %>% 
-  select(-Value)
+  dplyr::select(-Value)
 
 # Read St. John's data ----
 file_name <- "Data_St_Johns_All.xlsx"
@@ -203,7 +203,7 @@ d1 <- d_StJ %>%
          y = t_sy_y / n_taps,
          b = yday(b),
          t = "syrup",
-         ssc = brix86, # TR - This is just calculated from rule of 86 and not measured
+         ssc = brix86, # This is just calculated from rule of 86 and not measured
          ntaps = n_taps,
          o_date = as_date(tapping_date),
          c_date = as_date(untapping),

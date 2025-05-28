@@ -3,15 +3,10 @@
 #-------------------------------------------------------------------------------
 
 # To-do: ------------ 
-# - TR Something is wrong with the linear trend line for the VTH historic first boil data. The intercept is way to high.
-#      The problem is with the slope. The intercept is pretty much the same as VTC, which looks good, but the slope is distinguishabel smaller and causes and issue
 # - TR Add change in size of operation to analysis (requires appropriate data)
 #         - TR Census of Ag should have this data
 # - TR Add credible interval for the data
-# - TR Add uncertainty for the regionwide data, if I can get hold of standard deviation
-# - TR Do a break-point analysis and fit linear trends to to the decline and increase
-# - TR Add season open data from nine operations in Ontario (S Canadian Forest Service; Robert Sajan (Natural Resources Canada) and Brian Craig (Environment Canada))
-#      N.B.: It might be first boil dates rather than season open
+# - TR Add uncertainty for the region-wide data, if I can get hold of standard deviation
 
 # Load dependencies ----
 if(!existsFunction("brms")) library("brms") 
@@ -121,7 +116,7 @@ for (region in c("ME", "MA", "NH", "NY", "VT", "MN", "CFS", "OMSPA")){
                y = d$b[d$region == region & d$site == site], 
                pch = 4, lwd = 1.5, col = "darkgray")
       }
-    } else if (region == "VT" & site == "VTH") {
+    } else if (site %in% c("VTH", "STJ")) {
       points(x = d$yr[d$region == region & d$site == site], 
              y = d$o[d$region == region & d$site == site], 
              pch = 24, lwd = 1.5, col = "darkgray")
@@ -187,7 +182,8 @@ for (region in c("ME", "MA", "NH", "NY", "VT", "MN", "CFS", "OMSPA")){
       abline(a = b_intercept, b = b_slope, 
              col = ifelse(site == "VTC", "#154734", 
                           ifelse(site == "VTH", "#FFD416", 
-                                 ifelse (region == "CFS", "darkgray", "black"))),
+                                 ifelse (region == "CFS" | site == "STJ", 
+                                         "darkgray", "black"))),
              lwd = 2, lty = 3)
     } 
     
@@ -252,6 +248,9 @@ abline(lm(o_random_effects$region[, "Estimate", "yr"] ~
             filter (region %in% c("MA", "ME", "MN", "NH", "NY", "VT")) %>% 
             select(m_lat) %>% unlist()))
 
+# Plot only VTH first boil data to figure out what is going wrong ----
+plot(x = d$yr[d$region == "VT" & d$site == "VTH"],
+     y = d$b[d$region == "VT" & d$site == "VTH"])
 
 # TR - Started plotting the credibility intervals below ----
 
