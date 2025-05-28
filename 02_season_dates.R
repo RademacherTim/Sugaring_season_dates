@@ -3,10 +3,9 @@
 #-------------------------------------------------------------------------------
 
 # To-do: ------------ 
-# - TR Add change in size of operation to analysis (requires appropriate data)
-#         - TR Census of Ag should have this data
+# - TR Add change in size of operation to analysis (NASS census data) and
+#      uncertainties from coefficients of variation
 # - TR Add credible interval for the data
-# - TR Add uncertainty for the region-wide data, if I can get hold of standard deviation
 
 # Load dependencies ----
 if(!existsFunction("brms")) library("brms") 
@@ -84,8 +83,11 @@ for (region in c("ME", "MA", "NH", "NY", "VT", "MN", "CFS", "OMSPA")){
     if ((region != "VT" & region != "OMSPA") | (region == "VT" & site == "NA")) {
       plot(x = d$yr[d$region == region & d$site == site], 
            y = d$o[d$region == region & d$site == site], 
-           pch = 21, lwd = 1.5, col = ifelse(site == "NA", "black", "darkgray"),
-           xlim = c(ifelse(region != "VT", ifelse(region != "MN", 1960, 1940), 1870), 2023), 
+           pch = ifelse(site == "NA", 21, 24), 
+           lwd = 1.5, 
+           col = ifelse(site == "NA", "black", "darkgray"),
+           xlim = c(ifelse(region != "VT", 
+                           ifelse(region != "MN", 1960, 1940), 1870), 2023), 
            ylim = c(30, 150),
            axes = FALSE, 
            xlab = "Year", ylab = "Day of the year")
@@ -110,47 +112,57 @@ for (region in c("ME", "MA", "NH", "NY", "VT", "MN", "CFS", "OMSPA")){
       axis(side = 2, las = 1)
       points(x = d$yr[d$region == region & d$site == site], 
              y = d$c[d$region == region & d$site == site], 
-             pch = 19, lwd = 1.5, col = ifelse(site == "NA", "black", "darkgray"))
+             pch =  ifelse(site == "NA", 19, 25), 
+             lwd = 1.5, 
+             bg = ifelse(site == "NA", "black", "darkgray"),
+             col = ifelse(site == "NA", "black", "darkgray"))
       if (site == "STJ" | region == "CFS") {
         points(x = d$yr[d$region == region & d$site == site], 
                y = d$b[d$region == region & d$site == site], 
                pch = 4, lwd = 1.5, col = "darkgray")
       }
-    } else if (site %in% c("VTH", "STJ")) {
-      points(x = d$yr[d$region == region & d$site == site], 
-             y = d$o[d$region == region & d$site == site], 
-             pch = 24, lwd = 1.5, col = "darkgray")
-      points(x = d$yr[d$region == region & d$site == site], 
-             y = d$c[d$region == region & d$site == site], 
-             pch = 25, lwd = 1.5, col = "darkgray", bg = "darkgray")
+    } else if (site %in% c("VTC", "VTH", "STJ")) {
       points(x = d$yr[d$region == region & d$site == site], 
              y = d$b[d$region == region & d$site == site], 
-             pch = 4, lwd = 1.5, col = "#FFD416")
-    } else if (region == "VT" & site == "VTC") {
-      points(x = d$yr[d$region == region & d$site == site], 
-             y = d$b[d$region == region & d$site == site], 
-             pch = 4, lwd = 1.5, col = "#154734")
+             pch = 4, lwd = 1.5, 
+             col = ifelse(site == "VTC","#154734", 
+                          ifelse(site == "VTH", "#FFD416", "darkgray")))
+      if (site == "VTH") {
+        points(x = d$yr[d$region == region & d$site == site], 
+               y = d$o[d$region == region & d$site == site], 
+               pch = 24, lwd = 1.5, col = "darkgray")
+        points(x = d$yr[d$region == region & d$site == site], 
+               y = d$c[d$region == region & d$site == site], 
+               pch = 25, lwd = 1.5, col = "darkgray", bg = "darkgray")
+      }
     } else if (region == "OMSPA") {
       points(x = d$yr[d$region == region & d$site == site], 
              y = d$b[d$region == region & d$site == site], 
              pch = 4, lwd = 1.5, col = "black")
       points(x = d$yr[d$region == region & d$site == site], 
              y = d$c[d$region == region & d$site == site], 
-             pch = 25, lwd = 1.5, col = "black")
+             pch = 25, lwd = 1.5, col = "black", bg = "black")
     }
     
     # Plot open and close for all sites except for VTC ----
     if (site != "VTC" & region != "CFS") {
       
       # Calculate the intercept and slope for the chosen region
-      o_intercept <- o_fixed_effects["Intercept", "Estimate"] + 
-        o_random_effects$region[region, "Estimate", "Intercept"] +
-        o_random_effects$`region:site`[paste0(region, "_", site), "Estimate", "Intercept"]
+      if(region != "OMSPA"){ # No season open for OMSPA
+        o_intercept <- o_fixed_effects["Intercept", "Estimate"] + 
+          o_random_effects$region[region, "Estimate", "Intercept"] +
+          o_random_effects$`region:site`[paste0(region, "_", site), "Estimate", "Intercept"]
   
-      o_slope <- o_fixed_effects["yr", "Estimate"] + 
-        o_random_effects$region[region, "Estimate", "yr"] +
-        o_random_effects$`region:site`[paste0(region, "_", site), "Estimate", "yr"]
-
+        o_slope <- o_fixed_effects["yr", "Estimate"] + 
+          o_random_effects$region[region, "Estimate", "yr"] +
+          o_random_effects$`region:site`[paste0(region, "_", site), "Estimate", "yr"]
+        
+        # Add the linear trends for beginning of the season ----
+        abline(a = o_intercept, b = o_slope, 
+               col = ifelse(site == "NA", "black", "darkgray"),
+               lwd = 2, lty = 2)
+      }
+      
       c_intercept <- c_fixed_effects["Intercept", "Estimate"] + 
         c_random_effects$region[region, "Estimate", "Intercept"] +
         c_random_effects$`region:site`[paste0(region, "_", site), "Estimate", "Intercept"]
@@ -160,10 +172,8 @@ for (region in c("ME", "MA", "NH", "NY", "VT", "MN", "CFS", "OMSPA")){
         c_random_effects$`region:site`[paste0(region, "_", site), "Estimate", "yr"]
       # Add credibility interval for the trend lines ----
       #polygon()
-      # Add the linear trends for beginning and end of the season ----
-      abline(a = o_intercept, b = o_slope, 
-           col = ifelse(site == "NA", "black", "darkgray"),
-           lwd = 2, lty = 2)
+ 
+      # Add the linear trends for beginning of the season ----
       abline(a = c_intercept, b = c_slope, 
              col = ifelse(site == "NA", "black", "darkgray"),
              lwd = 2, lty = 1)
@@ -191,62 +201,82 @@ for (region in c("ME", "MA", "NH", "NY", "VT", "MN", "CFS", "OMSPA")){
 } # End loop over regions
 
 
-# TR - Add change for individual sites into the graphic
 # Plot change in season close versus latitude ----
 par(mar = c (5, 6, 1, 1), mfrow = c(3, 1))
 plot(x = d %>% group_by(region) %>% summarise(m_lat = mean(m_lat)) %>% 
        filter (region %in% c("AL", "AQ", "EA", "GB", "HK", "LA", "MA", "ME", 
-                             "MN", "NH", "NY", "OMSPA", "OV", "QI", "SI", "SW",
+                             "NH", "NY", "OV", "QI", "SI", "SW",
                              "VT", "WW")) %>% 
-       select(m_lat) %>% unlist(),
-     y = c_random_effects$region[, "Estimate", "yr"],
-     pch = 19, axes = FALSE, xlim = c(42, 49), ylim = c (-0.0015, 0.0025),
+       dplyr::select(m_lat) %>% unlist(),
+     y = c_random_effects$region[-c(9, 12), "Estimate", "yr"],
+     pch = 19, axes = FALSE, xlim = c(42, 48), ylim = c (-0.0025, 0.0025),
      xlab = expression(paste("Latitude (",degree,")")),
-     ylab = "")
+     ylab = "", cex = 1.2)
+points(x = d %>% group_by(site) %>% summarise(m_lat = mean(m_lat)) %>% 
+         filter (site %in% c("STJ", "VTH")) %>% 
+         dplyr::select(m_lat) %>% unlist(),
+       y = c_random_effects$`region:site`[c("MN_STJ", "VT_VTH"), "Estimate", "yr"],
+       pch = 19, col = "darkgray", cex = 1.2)
 mtext(side = 2, line = 4, text = expression(beta[close]))
-axis(side = 1, at = seq(42, 52, by = 2))
+axis(side = 1, at = seq(42, 48))
 axis(side = 2, las = 1)
 abline(lm(c_random_effects$region[, "Estimate", "yr"] ~ 
             d %>% group_by(region) %>% summarise(m_lat = mean(m_lat)) %>% 
             filter (region %in% c("AL", "AQ", "EA", "GB", "HK", "LA", "MA", "ME", 
                                   "MN", "NH", "NY", "OMSPA", "OV", "QI", "SI", "SW",
                                   "VT", "WW")) %>% 
-            select(m_lat) %>% unlist()))
+            dplyr::select(m_lat) %>% unlist()),
+       lty = 2, lwd = 2)
+abline(h = 0, col ="darkgray")
 
 # Plot change in first boil versus latitude ----
 plot(x = d %>% group_by(region) %>% summarise(m_lat = mean(m_lat)) %>% 
-       filter (region %in% c("AL", "AQ", "CFS", "EA", "GB", "HK", "LA", "MN", 
-                             "OMSPA", "OV", "QI", "SI", "SW", "VT", "WW")) %>% 
-       select(m_lat) %>% unlist(),
-     y = b_random_effects$region[, "Estimate", "yr"],
-     pch = 19, axes = FALSE, xlim = c(42, 49), ylim = c (-0.0015, 0.0025),
+       filter (region %in% c("AL", "AQ", "CFS", "EA", "GB", "HK", "LA", 
+                             "OV", "QI", "SI", "SW", "VT", "WW")) %>% 
+       dplyr::select(m_lat) %>% unlist(),
+     y = b_random_effects$region[-c(8, 9), "Estimate", "yr"],
+     pch = 19, axes = FALSE, xlim = c(42, 48), ylim = c (-0.0025, 0.0025),
      xlab = expression(paste("Latitude (",degree,")")),
-     ylab = "")
+     ylab = "", cex = 1.2)
+points(x = d %>% group_by(site) %>% summarise(m_lat = mean(m_lat)) %>% 
+         filter (site %in% c("VTH", "VTC", "STJ")) %>% 
+         dplyr::select(m_lat) %>% unlist(),
+       y = b_random_effects$`region:site`[c("MN_STJ", "VT_VTH", "VT_VTC"), "Estimate", "yr"],
+       pch = 19, col = "darkgray", cex = 1.2)
 mtext(side = 2, line = 4, text = expression(beta[boil]))
-axis(side = 1, at = seq(42, 52, by = 2))
+axis(side = 1, at = seq(42, 48))
 axis(side = 2, las = 1)
 abline(lm(b_random_effects$region[, "Estimate", "yr"] ~ 
             d %>% group_by(region) %>% summarise(m_lat = mean(m_lat)) %>% 
             filter (region %in% c("AL", "AQ", "CFS", "EA", "GB", "HK", "LA", "MN", 
                                   "OMSPA", "OV", "QI", "SI", "SW", "VT", "WW")) %>% 
-            select(m_lat) %>% unlist()))
+            dplyr::select(m_lat) %>% unlist()),
+       lty = 2, lwd = 2, col ="black")
+abline(h = 0, col = "darkgray")
 
 # Plot change in season open versus latitude ----
 plot(x = d %>% group_by(region) %>% summarise(m_lat = mean(m_lat)) %>% 
-       filter (region %in% c("MA", "ME", "MN", "NH", "NY", "VT")) %>% 
-       select(m_lat) %>% unlist(),
-     y = o_random_effects$region[, "Estimate", "yr"],
-     pch = 19, axes = FALSE, xlim = c(42, 52), ylim = c (-0.0015, 0.0025),
+       filter (region %in% c("MA", "ME", "NH", "NY", "VT")) %>% 
+       dplyr::select(m_lat) %>% unlist(),
+     y = o_random_effects$region[-3, "Estimate", "yr"],
+     pch = 19, axes = FALSE, xlim = c(42, 48), ylim = c (-0.0025, 0.0025),
      xlab = expression(paste("Latitude (",degree,")")),
-     ylab = "")
+     ylab = "", cex = 1.2)
+points(x = d %>% group_by(site) %>% summarise(m_lat = mean(m_lat)) %>% 
+         filter (site %in% c("VTH", "STJ")) %>% 
+         dplyr::select(m_lat) %>% unlist(),
+       y = o_random_effects$`region:site`[c("MN_STJ", "VT_VTH"), "Estimate", "yr"],
+       pch = 19, col = "darkgray", cex = 1.2)
 mtext(side = 2, line = 4, text = expression(beta[open]))
-axis(side = 1, at = seq(42, 52, by = 2))
+axis(side = 1, at = seq(42, 48))
 axis(side = 2, las = 1)
 abline(lm(o_random_effects$region[, "Estimate", "yr"] ~ 
             d %>% group_by(region) %>% 
             summarise(m_lat = mean(m_lat)) %>% 
             filter (region %in% c("MA", "ME", "MN", "NH", "NY", "VT")) %>% 
-            select(m_lat) %>% unlist()))
+            dplyr::select(m_lat) %>% unlist()),
+       lty = 2, lwd = 2)
+abline(h = 0, col ="darkgray")
 
 # Plot only VTH first boil data to figure out what is going wrong ----
 plot(x = d$yr[d$region == "VT" & d$site == "VTH"],
