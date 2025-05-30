@@ -219,8 +219,40 @@ d <- rbind(d, d1); rm(d1)
 
 # Start reading the data from Quebec ----
 file_name <- "./data/SondagesHebdomadaires.xls"
-read_excel(path = file_name, sheet = "region")
-# TR - The above still needs a ton of work to understand the data and extract the necessary points for the analysis.
+for (year in 1999:2012){ 
+  line <- -15*year+30196
+  dates <- read_excel(path = file_name, sheet = "1999a2012", 
+                      range = paste0("C",line,":L",line), col_types = c("date"), 
+                      col_names = c("week1", "week2", "week3", "week4", "week5", 
+                                    "week6", "week7", "week8", "week9", "week10")) %>%
+    mutate(week1 = as_date(week1),
+           week2 = as_date(week2),
+           week3 = as_date(week3),
+           week4 = as_date(week4),
+           week5 = as_date(week5),
+           week6 = as_date(week6),
+           week7 = as_date(week7),
+           week8 = as_date(week8),
+           week9 = as_date(week9),
+           week10 = as_date(week10)) %>% 
+    pivot_longer(cols = 1:10, names_to = "week", values_to = "date")
+  tmp <- read_excel(path = file_name, sheet = "1999a2012", 
+                    range = paste0("N",line+2,":X",line+13),
+                    col_names = c("region", "week1", "week2", "week3", "week4", 
+                                  "week5", "week6", "week7", "week8", "week9", 
+                                  "week10")) %>% 
+    pivot_longer(cols = 2:11, names_to = "week", values_to = "y")
+  tmp <- left_join(tmp, dates, by = "week")
+  
+  if (year == 1999) {
+    d2 <- tmp
+  } else {
+    d2 <- rbind(d2, tmp)
+  }
+}
+
+# TR - Wrangle data from the producers survey to extract season start and end dates ----
+
 
 # Additional daily data ----
 dates <- format(seq(from = as_date("2024-02-15"), 
