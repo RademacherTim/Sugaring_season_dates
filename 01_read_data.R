@@ -2,10 +2,6 @@
 # Script to read the data for the tapping date analysis
 #-------------------------------------------------------------------------------
 
-# To-do: ----
-# TR - Add data from Quebec (PPGB survey from 1999 to 2011)
-#.    - TR Contact Daniel Houle and Louis Duchesne on season open and close
-
 # Load dependencies ----
 if(!existsFunction("%≥%")) library("tidyverse")
 if(!existsFunction("read_excel")) library("readxl")
@@ -220,6 +216,11 @@ d1 <- d_StJ %>%
 
 # Add the Saint John's and Saint Benedict data to the overall data ----
 d <- rbind(d, d1); rm(d1)
+
+# Start reading the data from Quebec ----
+file_name <- "./data/SondagesHebdomadaires.xls"
+read_excel(path = file_name, sheet = "region")
+# TR - The above still needs a ton of work to understand the data and extract the necessary points for the analysis.
 
 # Additional daily data ----
 dates <- format(seq(from = as_date("2024-02-15"), 
