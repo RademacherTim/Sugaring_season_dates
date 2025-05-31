@@ -2,18 +2,36 @@
 # Script to plot the beginning and end of season dates
 #-------------------------------------------------------------------------------
 
+# TR - Need to include the duration since first boil either in the same model 
+# or a separate model
+
 # Load dependencies ----
 if(!existsFunction("brms")) library("brms") 
 
 # Load data ----
 if(!exists("d")) source("01_read_data.R")
 
-# Model a linear trend for the onset and end of season ----
-mod_d <- brm(formula = d ~ yr + (yr | region / site),
-             data = d %>% filter(!is.na(d)), 
+
+# Define the two response models for the duration since season open and since 
+# first boil ----
+formula_d_o <- bf(d_o ~ yr + (yr | region / site))
+formula_d_b <- bf(d_b ~ yr + (yr | region / site))
+
+# Fit the multivariate model with correlated residuals for the two variables of 
+# season duration ----
+mod_d <- brm(
+  formula = formula_d_o + formula_d_b + set_rescor(TRUE), # set_rescor allows the model to estimate the residual correlation between d_o and d_b.
+  data = d %>% filter(!is.na(d_o)),
+  family = gaussian(),
+  chains = 4, cores = 4, iter = 4000
+)
+
+# Model a linear trend for the season duration since its open ----
+mod_d_o <- brm(formula = d_o ~ yr + (yr | region / site),
+             data = d %>% filter(!is.na(d_o)), 
              family = gaussian(),
-             chains = 4, cores = 4, iter = 4000,
-             control = list(adapt_delta = 0.99))
+             chains = 4, cores = 4, iter = 6000,
+             control = list(adapt_delta = 0.99, max_treedepth = 12))
 summary(mod_d)
 plot(mod_d)
 
@@ -41,7 +59,7 @@ for (region in c("ME", "MA", "NH", "NY", "PA", "VT", "MN")){
   for (site in sites) {
     if(region != "VT" | (region == "VT" & site == "NA")) {
       plot(x = d$yr[d$region == region & d$site == site], 
-           y = d$d[d$region == region & d$site == site], 
+           y = d$d_o[d$region == region & d$site == site], 
            pch = ifelse(site == "NA", 19, 23), 
            lwd = 1.5, 
            col = ifelse(site == "NA", "black", "darkgray"),
@@ -66,7 +84,7 @@ for (region in c("ME", "MA", "NH", "NY", "PA", "VT", "MN")){
       axis(side = 2, las = 1)
     } else if (region == "VT" & site == "VTH") {
       points(x = d$yr[d$region == region & d$site == site], 
-             y = d$d[d$region == region & d$site == site], 
+             y = d$d_o[d$region == region & d$site == site], 
              pch = 23, lwd = 1.5, col = "darkgray")
     }
   

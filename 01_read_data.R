@@ -215,8 +215,8 @@ d1 <- d_StJ %>%
          w = 1,
          site = "STJ",
          source = "IND") %>%
-  dplyr::select(yr, region, o, c, y, b, t, ssc, ntaps, w, o_date, c_date, b_date, d, m_lat,
-                n_lat, s_lat, site, source)
+  dplyr::select(yr, region, o, c, y, b, t, ssc, ntaps, w, o_date, c_date, 
+                b_date, d_o, d_b, m_lat, n_lat, s_lat, site, source)
 
 # Add the Saint John's and Saint Benedict data to the overall data ----
 d <- rbind(d, d1); rm(d1, d_StJ)
@@ -295,8 +295,8 @@ d3 <- left_join(season_o, season_c, by = join_by(region, yr)) %>%
          d_b = c - b,
          site = "NA",
          source = "PPAQ") %>%
-  select(yr, region, o, c, y, b, t, ssc, ntaps, w, o_date, c_date, b_date, d, 
-         everything())
+  select(yr, region, o, c, y, b, t, ssc, ntaps, w, o_date, c_date, b_date, d_o, 
+         d_b, everything())
 
 # Simplify regional names for the administrative regions ----
 d3 <- d3 %>% mutate(region = case_when(
@@ -379,5 +379,5 @@ d <- rbind(d, d3); rm(d2, d3, tmp, season_o, season_c)
 #   
 
 # Clean up workspace ----
-rm(file_name, line, year)
+rm(file_name, line, year, dates)
 #===============================================================================
