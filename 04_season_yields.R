@@ -4,6 +4,8 @@
 
 # TR - Rename state to region 
 # TR - Add OMSPA data to graph 
+# TR - ADD PPAQ data to graph 
+# TR - Create multivariate model using d_o and d_b
 
 # Load dependencies ----
 if(!existsFunction("brms")) library("brms") 
@@ -16,8 +18,8 @@ priors <- c(set_prior("normal(0, 1)", class = "b"),  # fixed effects for the tre
             set_prior("normal(0, 1)", class = "sd")) # group-level effects of state and site
 
 # Fit a linear relationship to the yield versus season duration ----
-mod_y <- brm(formula = y ~ d + (d | site),
-             data = d %>% filter(!is.na(d)), 
+mod_y <- brm(formula = y ~ d_o + (d_o | site),
+             data = d %>% filter(!is.na(d_o)), 
              family = gaussian(),
              prior = priors, 
              chains = 4, cores = 4, iter = 6000,
@@ -41,7 +43,7 @@ y_random_effects <- ranef(mod_y)  # Random effects by group (state)
 
 # Plot duration of the season versus the yield ----
 par(mfrow = c(1, 1))
-plot (x = d$d[d$region == "VT"],
+plot (x = d$d_o[d$region == "VT"],
       y = d$y[d$region == "VT"],
       pch = 19, col = "#154734", cex = 1.2,
       axes = FALSE, xlim = c(0, 65), ylim = c(0, 0.45),
@@ -49,23 +51,23 @@ plot (x = d$d[d$region == "VT"],
       ylab = "Average yield (gal / tap)")
 axis(side = 1)
 axis(side = 2, las = 1)
-points(x = d$d[d$region == "MN"],
+points(x = d$d_o[d$region == "MN"],
        y = d$y[d$region == "MN"],
        pch = 19, col = "#cd1041")
 
 # Add the linear relationship for VT ----
 y_intercept <- y_fixed_effects["Intercept", "Estimate"] + 
   y_random_effects$site["NA", "Estimate", "Intercept"]
-y_slope <- y_fixed_effects["d", "Estimate"] + 
-  y_random_effects$site["NA", "Estimate", "d"]
+y_slope <- y_fixed_effects["d_o", "Estimate"] + 
+  y_random_effects$site["NA", "Estimate", "d_o"]
 abline(a = y_intercept, b = y_slope, 
        col = "#154734", lwd = 2, lty = 1)
 
 # Add the linear relationship for STJ ----
 y_intercept <- y_fixed_effects["Intercept", "Estimate"] + 
   y_random_effects$site["STJ", "Estimate", "Intercept"]
-y_slope <- y_fixed_effects["d", "Estimate"] + 
-  y_random_effects$site["STJ", "Estimate", "d"]
+y_slope <- y_fixed_effects["d_o", "Estimate"] + 
+  y_random_effects$site["STJ", "Estimate", "d_o"]
 abline(a = y_intercept, b = y_slope, 
        col = "#cd1041", lwd = 2, lty = 1)
 
