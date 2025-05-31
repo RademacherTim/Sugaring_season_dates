@@ -2,6 +2,8 @@
 # Script to read the data for the tapping date analysis
 #-------------------------------------------------------------------------------
 
+# TR - Make sure the census data is read correctly and integrated in the d tibble
+
 # Load dependencies ----
 if(!existsFunction("%≥%")) library("tidyverse")
 if(!existsFunction("read_excel")) library("readxl")
@@ -215,13 +217,14 @@ d1 <- d_StJ %>%
                 n_lat, s_lat, site, source)
 
 # Add the Saint John's and Saint Benedict data to the overall data ----
-d <- rbind(d, d1); rm(d1)
+d <- rbind(d, d1); rm(d1, d_StJ)
 
 # Start reading the data from Quebec ----
-file_name <- "./data/SondagesHebdomadaires.xls"
+file_name <- "SondagesHebdomadaires.xls"
 for (year in 1999:2012){ 
   line <- -15*year+30196
-  dates <- read_excel(path = file_name, sheet = "1999a2012", 
+  dates <- read_excel(path = paste0("./data/",file_name), 
+                      sheet = "1999a2012", 
                       range = paste0("C",line,":L",line), col_types = c("date"), 
                       col_names = c("week1", "week2", "week3", "week4", "week5", 
                                     "week6", "week7", "week8", "week9", "week10")) %>%
@@ -236,7 +239,8 @@ for (year in 1999:2012){
            week9 = as_date(week9),
            week10 = as_date(week10)) %>% 
     pivot_longer(cols = 1:10, names_to = "week", values_to = "date")
-  tmp <- read_excel(path = file_name, sheet = "1999a2012", 
+  tmp <- read_excel(path = paste0("./data/", file_name), 
+                    sheet = "1999a2012", 
                     range = paste0("N",line+2,":X",line+13),
                     col_names = c("region", "week1", "week2", "week3", "week4", 
                                   "week5", "week6", "week7", "week8", "week9", 
@@ -251,26 +255,126 @@ for (year in 1999:2012){
   }
 }
 
-# TR - Wrangle data from the producers survey to extract season start and end dates ----
+# Get the first date that has the final yield for each region and year ----
+# N.B.: Production might have ceased up to 6 days earlier due to the weekly 
+# nature of the survey.
+# N.B.: If the first date with the annual production was the last date of the 
+# survey, production might have ended an indeterminate amount of time later
+season_c <- d2 %>%
+  mutate(yr = year(date)) %>%
+  group_by(region, yr) %>%
+  filter(y == max(y, na.rm = TRUE)) %>%
+  slice_min(date, with_ties = FALSE) %>%
+  ungroup() %>%
+  select(region, yr, date, y) %>% 
+  rename(c_date = "date")
 
+# Get the first date that has some production for each region and year ----
+# N.B.: Production might have started up to 6 days earlier due to the weekly 
+# nature of the survey ----
+season_o <- d2 %>% 
+  mutate(yr = year(date)) %>%
+  filter(y > 0) %>% 
+  group_by(region, yr) %>%
+  summarise(b_date = min(date), .groups = "drop")
+
+# Add necessary columns to join the data ----
+d3 <- left_join(season_o, season_c, by = join_by(region, yr)) %>%
+  mutate(o = NA, 
+         c = yday(c_date),
+         y = y / 11, 
+         b = yday(b_date),
+         t = "syrup", 
+         ssc = NA, 
+         ntaps = NA,
+         w = NA,
+         o_date = NA,
+         d = c - b+1,
+         site = "NA",
+         source = "PPAQ") %>%
+  select(yr, region, o, c, y, b, t, ssc, ntaps, w, o_date, c_date, b_date, d, 
+         everything())
+
+# Simplify regional names for the administrative regions ----
+d3 <- d3 %>% mutate(region = case_when(
+  region == "Bas-St-Laurent" ~ "BSL",
+  region == "Beauce" ~ "BEA",
+  region == "Centre-du-Québec" ~ "CDQ",
+  region == "Cote-du-Sud" ~ "CDS",
+  region == "Estrie" ~ "EST",
+  region == "Lanaudière" ~ "LAN",
+  region == "Laurentides" ~ "LAU",
+  region == "Mauricie" ~ "MAU",
+  region == "Provincial" ~ "PRO",
+  region == "Québec" ~ "QUE",
+  region == "St-hyacinthe" ~ "STH",
+  region == "Valleyfield" ~ "VAL",
+))
+
+# Add latitudes estimated from Fig. 1 in Houle et al. (2015) ----
+d3 <- d3 %>% mutate(m_lat = case_when(
+  region == "BSL" ~ 47.99,
+  region == "BEA" ~ 46.08,
+  region == "CDQ" ~ 45.98,
+  region == "CDS" ~ 47.10,
+  region == "EST" ~ 45.46,
+  region == "LAN" ~ 46.21,
+  region == "LAU" ~ 45.53,
+  region == "MAU" ~ 46.54,
+  region == "PRO" ~ 46.29,
+  region == "QUE" ~ 46.94,
+  region == "STH" ~ 45.51,
+  region == "VAL" ~ 45.21,
+), n_lat = case_when(
+  region == "BSL" ~ 48.53,
+  region == "BEA" ~ 46.51,
+  region == "CDQ" ~ 46.56,
+  region == "CDS" ~ 47.43,
+  region == "EST" ~ 45.93,
+  region == "LAN" ~ 46.70,
+  region == "LAU" ~ 45.58,
+  region == "MAU" ~ 46.85,
+  region == "PRO" ~ 48.53,
+  region == "QUE" ~ 47.35,
+  region == "STH" ~ 46.02,
+  region == "VAL" ~ 45.41,
+), s_lat = case_when(
+  region == "BSL" ~ 47.45,
+  region == "BEA" ~ 45.64,
+  region == "CDQ" ~ 45.59,
+  region == "CDS" ~ 46.77,
+  region == "EST" ~ 45.00,
+  region == "LAN" ~ 45.72,
+  region == "LAU" ~ 45.48,
+  region == "MAU" ~ 46.23,
+  region == "PRO" ~ 45.00,
+  region == "QUE" ~ 46.53,
+  region == "STH" ~ 45.00,
+  region == "VAL" ~ 45.00,
+))
+
+d <- rbind(d, d3); rm(d2, d3, tmp, season_o, season_c)
 
 # Additional daily data ----
-dates <- format(seq(from = as_date("2024-02-15"), 
-                    to = as_date("2024-04-30"), 
-                    by = "day"), "%m-%d")
-d_StJ_daily <- read_excel(path = paste0("./data/", file_name),
-                          sheet = "Daily Sap Sum",
-                          range = "A6:CC37",
-                          col_names = c("y", "AAA", "BBB", dates, "t_sap", 
-                                        "n_days")) %>% 
-  dplyr::select(-AAA, -BBB, -t_sap, -n_days) %>%
-  pivot_longer(cols = starts_with("0"),
-    names_to = "month_day", 
-    values_to = "value") %>%
-  mutate(value = if_else(is.na(value), 0, value)) %>% 
-  slice(-c(91, 167, 243, 319, 471, 623, 775, 927, 1003, 1155, 1231, 1307, 1459, 
-           1535, 1611, 1763, 1839, 1915, 2067, 2143, 2219, 2371)) %>% # Filter out 02-29 on non-leap years
-  mutate(date = as_date(paste(y, month_day, sep = "-"))) %>%
-  dplyr::select(-month_day, -y)
-  
+# dates <- format(seq(from = as_date("2024-02-15"), 
+#                     to = as_date("2024-04-30"), 
+#                     by = "day"), "%m-%d")
+# d_StJ_daily <- read_excel(path = paste0("./data/", file_name),
+#                           sheet = "Daily Sap Sum",
+#                           range = "A6:CC37",
+#                           col_names = c("y", "AAA", "BBB", dates, "t_sap", 
+#                                         "n_days")) %>% 
+#   dplyr::select(-AAA, -BBB, -t_sap, -n_days) %>%
+#   pivot_longer(cols = starts_with("0"),
+#     names_to = "month_day", 
+#     values_to = "value") %>%
+#   mutate(value = if_else(is.na(value), 0, value)) %>% 
+#   slice(-c(91, 167, 243, 319, 471, 623, 775, 927, 1003, 1155, 1231, 1307, 1459, 
+#            1535, 1611, 1763, 1839, 1915, 2067, 2143, 2219, 2371)) %>% # Filter out 02-29 on non-leap years
+#   mutate(date = as_date(paste(y, month_day, sep = "-"))) %>%
+#   dplyr::select(-month_day, -y)
+#   
+
+# Clean up workspace ----
+rm(file_name, line, year)
 #===============================================================================

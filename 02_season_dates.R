@@ -67,7 +67,7 @@ layout(layout_matrix, widths = c(1, 1, 1, 1, 2, 1, 1, 1), heights = c(1, 1, 1))
 par(mar = c(5, 5, 1, 1))
 
 # Loop over regions, as there is one plot per region ----
-for (region in c("ME", "MA", "NH", "NY", "VT", "MN", "CFS", "OMSPA")){
+for (region in c("ME", "MA", "NH", "NY", "VT", "MN", "CFS", "OMSPA", "PRO")){
   
   # Determine if there are individual sites in a region (NA for region-wide averages)
   if (region != "VT" & region != "MN") {
@@ -100,7 +100,8 @@ for (region in c("ME", "MA", "NH", "NY", "VT", "MN", "CFS", "OMSPA")){
              region == "VT" ~ "Vermont",
              region == "PA" ~ "Pensylvannia",
              region == "MN" ~ "Minnesota",
-             region == "CFS" ~ "Ontario"))
+             region == "CFS" ~ "Ontario",
+             region == "PRO" ~ "Quebec"))
       if (region == "MN") {
         x_ats <- seq(1940, 2020, by = 10)
       } else if (region != "VT") {
@@ -116,10 +117,11 @@ for (region in c("ME", "MA", "NH", "NY", "VT", "MN", "CFS", "OMSPA")){
              lwd = 1.5, 
              bg = ifelse(site == "NA", "black", "darkgray"),
              col = ifelse(site == "NA", "black", "darkgray"))
-      if (site == "STJ" | region == "CFS") {
+      if (site == "STJ" | region == "CFS" | region == "PRO") {
         points(x = d$yr[d$region == region & d$site == site], 
                y = d$b[d$region == region & d$site == site], 
-               pch = 4, lwd = 1.5, col = "darkgray")
+               pch = 4, lwd = 1.5, 
+               col = ifelse(region != "PRO", "darkgray", "black"))
       }
     } else if (site %in% c("VTC", "VTH", "STJ")) {
       points(x = d$yr[d$region == region & d$site == site], 
@@ -141,14 +143,14 @@ for (region in c("ME", "MA", "NH", "NY", "VT", "MN", "CFS", "OMSPA")){
              pch = 4, lwd = 1.5, col = "black")
       points(x = d$yr[d$region == region & d$site == site], 
              y = d$c[d$region == region & d$site == site], 
-             pch = 25, lwd = 1.5, col = "black", bg = "black")
+             pch = 19, lwd = 1.5, col = "black", bg = "black")
     }
     
-    # Plot open and close for all sites except for VTC ----
+    # Plot open and close trends for all sites except for VTC, CFS, and PRO ----
     if (site != "VTC" & region != "CFS") {
       
       # Calculate the intercept and slope for the chosen region
-      if(region != "OMSPA"){ # No season open for OMSPA
+      if(region != "OMSPA" & region != "PRO"){ # No season open for OMSPA and PPAQ
         o_intercept <- o_fixed_effects["Intercept", "Estimate"] + 
           o_random_effects$region[region, "Estimate", "Intercept"] +
           o_random_effects$`region:site`[paste0(region, "_", site), "Estimate", "Intercept"]
@@ -180,7 +182,7 @@ for (region in c("ME", "MA", "NH", "NY", "VT", "MN", "CFS", "OMSPA")){
     } # End site != VTC & region != "CFS" condition 
     
     # Plot first boil dates for VTH, VTC, and STJ ----
-    if (site %in% c("VTH", "VTC", "STJ") | region == "CFS" | region == "OMSPA") {
+    if (site %in% c("VTH", "VTC", "STJ") | region %in% c("CFS", "OMSPA", "PRO")) {
       b_intercept <- b_fixed_effects["Intercept", "Estimate"] + 
         b_random_effects$region[region, "Estimate", "Intercept"] + 
         b_random_effects$`region:site`[paste0(region,"_",site), "Estimate", "Intercept"]
@@ -204,12 +206,13 @@ for (region in c("ME", "MA", "NH", "NY", "VT", "MN", "CFS", "OMSPA")){
 # Plot change in season close versus latitude ----
 par(mar = c (5, 6, 1, 1), mfrow = c(3, 1))
 plot(x = d %>% group_by(region) %>% summarise(m_lat = mean(m_lat)) %>% 
-       filter (region %in% c("AL", "AQ", "EA", "GB", "HK", "LA", "MA", "ME", 
-                             "NH", "NY", "OV", "QI", "SI", "SW",
-                             "VT", "WW")) %>% 
+       filter (region %in% c("AL", "AQ", "BEA", "BSL", "CDQ", "CDS", "EA", 
+                             "EST", "GB", "HK", "LA", "LAN", "LAU", "MA", "MAU",
+                             "ME", "NH", "NY", "OV", "QI", "QUE", "SI", "STH", 
+                             "SW", "VAL", "VT", "WW")) %>% 
        dplyr::select(m_lat) %>% unlist(),
-     y = c_random_effects$region[-c(9, 12), "Estimate", "yr"],
-     pch = 19, axes = FALSE, xlim = c(42, 48), ylim = c (-0.0025, 0.0025),
+     y = c_random_effects$region[-c(17, 20, 22), "Estimate", "yr"],
+     pch = 19, axes = FALSE, xlim = c(42, 48), ylim = c (-0.0025, 0.0045),
      xlab = expression(paste("Latitude (",degree,")")),
      ylab = "", cex = 1.2)
 points(x = d %>% group_by(site) %>% summarise(m_lat = mean(m_lat)) %>% 
@@ -220,22 +223,25 @@ points(x = d %>% group_by(site) %>% summarise(m_lat = mean(m_lat)) %>%
 mtext(side = 2, line = 4, text = expression(beta[close]))
 axis(side = 1, at = seq(42, 48))
 axis(side = 2, las = 1)
-abline(lm(c_random_effects$region[, "Estimate", "yr"] ~ 
+abline(lm(c_random_effects$region[-c(17, 20, 22), "Estimate", "yr"] ~ 
             d %>% group_by(region) %>% summarise(m_lat = mean(m_lat)) %>% 
-            filter (region %in% c("AL", "AQ", "EA", "GB", "HK", "LA", "MA", "ME", 
-                                  "MN", "NH", "NY", "OMSPA", "OV", "QI", "SI", "SW",
-                                  "VT", "WW")) %>% 
+            filter (region %in% c("AL", "AQ", "BEA", "BSL", "CDQ", "CDS", "EA", 
+                                  "EST", "GB", "HK", "LA", "LAN", "LAU", "MA", "MAU",
+                                  "ME", "NH", "NY", "OV", "QI", "QUE", "SI", "STH", 
+                                  "SW", "VAL", "VT", "WW")) %>% 
             dplyr::select(m_lat) %>% unlist()),
        lty = 2, lwd = 2)
 abline(h = 0, col ="darkgray")
 
 # Plot change in first boil versus latitude ----
 plot(x = d %>% group_by(region) %>% summarise(m_lat = mean(m_lat)) %>% 
-       filter (region %in% c("AL", "AQ", "CFS", "EA", "GB", "HK", "LA", 
-                             "OV", "QI", "SI", "SW", "VT", "WW")) %>% 
+       filter (region %in% c("AL", "AQ", "BEA", "BSL", "CDQ", "CDS", "CFS", 
+                             "EA", "EST", "GB", "HK", "LA", "LAN", "LAU", "MAU",
+                             "OV", "QI", "QUE", "SI", "STH", "SW", "VAL", "VT", 
+                             "WW")) %>% 
        dplyr::select(m_lat) %>% unlist(),
-     y = b_random_effects$region[-c(8, 9), "Estimate", "yr"],
-     pch = 19, axes = FALSE, xlim = c(42, 48), ylim = c (-0.0025, 0.0025),
+     y = b_random_effects$region[-c(16, 17, 19), "Estimate", "yr"],
+     pch = 19, axes = FALSE, xlim = c(42, 48), ylim = c (-0.0025, 0.0045),
      xlab = expression(paste("Latitude (",degree,")")),
      ylab = "", cex = 1.2)
 points(x = d %>% group_by(site) %>% summarise(m_lat = mean(m_lat)) %>% 
@@ -246,10 +252,12 @@ points(x = d %>% group_by(site) %>% summarise(m_lat = mean(m_lat)) %>%
 mtext(side = 2, line = 4, text = expression(beta[boil]))
 axis(side = 1, at = seq(42, 48))
 axis(side = 2, las = 1)
-abline(lm(b_random_effects$region[, "Estimate", "yr"] ~ 
+abline(lm(b_random_effects$region[-c(16, 17, 19), "Estimate", "yr"] ~ 
             d %>% group_by(region) %>% summarise(m_lat = mean(m_lat)) %>% 
-            filter (region %in% c("AL", "AQ", "CFS", "EA", "GB", "HK", "LA", "MN", 
-                                  "OMSPA", "OV", "QI", "SI", "SW", "VT", "WW")) %>% 
+            filter (region %in% c("AL", "AQ", "BEA", "BSL", "CDQ", "CDS", "CFS", 
+                                  "EA", "EST", "GB", "HK", "LA", "LAN", "LAU", "MAU",
+                                  "OV", "QI", "QUE", "SI", "STH", "SW", "VAL", "VT", 
+                                  "WW")) %>% 
             dplyr::select(m_lat) %>% unlist()),
        lty = 2, lwd = 2, col ="black")
 abline(h = 0, col = "darkgray")
@@ -278,9 +286,6 @@ abline(lm(o_random_effects$region[, "Estimate", "yr"] ~
        lty = 2, lwd = 2)
 abline(h = 0, col ="darkgray")
 
-# Plot only VTH first boil data to figure out what is going wrong ----
-plot(x = d$yr[d$region == "VT" & d$site == "VTH"],
-     y = d$b[d$region == "VT" & d$site == "VTH"])
 
 # TR - Started plotting the credibility intervals below ----
 
