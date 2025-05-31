@@ -21,8 +21,10 @@ plot(mod_d)
 d_fixed_effects <- fixef(mod_d)  # Fixed effects (intercept and slope)
 d_random_effects <- ranef(mod_d)  # Random effects by group (region)
 
-# Plot NASS data for Massachusetts, Maine, New Hampshire, Vermont, New York, 
-# and Pennsylvania as well as individual site data from Minnesota ----
+# Plot data of season duration for Massachusetts, Maine, New Hampshire, Vermont, 
+# New York, and Pennsylvania from the NASS survey as well as individual site 
+# data from Minnesota, OMPSA and PPAQ data for regions in Ontraio and Quebec, 
+# respectively ----
 par(mfrow = c(3, 3), mar = c(5, 5, 1, 1))
 for (region in c("ME", "MA", "NH", "NY", "PA", "VT", "MN")){
   

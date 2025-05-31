@@ -35,13 +35,14 @@ d <- read_excel(path = paste0("./data/", file_name),
   mutate(o_date = as_date(o - 1, origin = paste0(yr, "-01-01")),
          c_date = as_date(c - 1, origin = paste0(yr, "-01-01")),
          b_date = as_date(b - 1, origin = paste0(yr, "-01-01")),
-         d = c-o)
+         d_o = c - o,
+         d_b = c - b)
 
 # Read the Pennsylvania (PA) data for season duration ----
 file_name <- "PA Season Duration - NASS.xlsx"
 d_PA <- read_excel(path = paste0("./data/", file_name),
                    sheet = "Sheet1",
-                   col_names = c("yr", "d"),
+                   col_names = c("yr", "d_o"),
                    skip = 3) %>%
   mutate(region = "PA")
 
@@ -206,7 +207,8 @@ d1 <- d_StJ %>%
          o_date = as_date(tapping_date),
          c_date = as_date(untapping),
          b_date = as_date(b),
-         d = c - o,
+         d_o = c - o,
+         d_b = c - b,
          m_lat = 45.57,
          n_lat = 45.58,
          s_lat = 45.56,
@@ -289,7 +291,8 @@ d3 <- left_join(season_o, season_c, by = join_by(region, yr)) %>%
          ntaps = NA,
          w = NA,
          o_date = NA,
-         d = c - b+1,
+         d_o = NA,
+         d_b = c - b,
          site = "NA",
          source = "PPAQ") %>%
   select(yr, region, o, c, y, b, t, ssc, ntaps, w, o_date, c_date, b_date, d, 
