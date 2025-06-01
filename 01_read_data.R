@@ -151,26 +151,6 @@ d <- d %>% mutate(site = case_when(
 d$region[d$site %in% c("VTC", "VTH")] <- "VT" # Set region for VTH & VTS to VT
 d$region[d$site %in% c("CFS", "OMSPA")] <- "ON" # Set region for CFS & OMSPA to ON
 
-# Read in NASS census data ----
-d_census <- read_csv(file = "./data/D25B89FB-A611-3258-B8AD-AB089064EE13.csv",
-                     col_names = c("source", "yr", "Period", "week", "Geo Level", 
-                                   "region", "State ANSI", "Ag District", 
-                                   "Ag District Code", "county", "County ANSI", 
-                                   "Zip Code", "Region", "watershed_code", 
-                                   "Watershed", "Commodity", "Data Item", 
-                                   "Domain", "Domain Category", "Value", 
-                                   "CV"),
-                     col_types = cols(), skip = 1) %>% 
-  dplyr::select(-c(Period, week, `State ANSI`, `Ag District`, 
-                   `Ag District Code`, `County ANSI`, Region, 
-                   watershed_code, Watershed, Commodity)) %>%
-  dplyr::filter(region %in% c("MAINE", "MASSACHUSETTS", "MINNESOTA", 
-                             "NEW HAMPSHIRE", "NEW YORK", "PENNSYLVANIA", 
-                             "VERMONT")) %>%
-  mutate(Value = ifelse(Value == "(D)" | Value == "(L)" | Value == "(Z)", NA, Value)) %>% 
-  mutate(value = parse_number(Value)) %>% 
-  dplyr::select(-Value)
-
 # Read St. John's data ----
 file_name <- "Data_St_Johns_All.xlsx"
 d_StJ <- read_excel(path = paste0("./data/", file_name),
@@ -357,6 +337,63 @@ d3 <- d3 %>% mutate(m_lat = case_when(
 ))
 
 d <- rbind(d, d3); rm(d2, d3, tmp, season_o, season_c)
+
+# Read in NASS census data ----
+d_cens <- read_csv(file = "./data/D25B89FB-A611-3258-B8AD-AB089064EE13.csv",
+                   col_names = c("source", "yr", "Period", "week", "geo_level", 
+                                 "region", "State ANSI", "Ag District", 
+                                 "Ag District Code", "county", "County ANSI", 
+                                 "zip_code", "Region", "watershed_code", 
+                                 "Watershed", "Commodity", "data_item", 
+                                 "domain", "Domain Category", "Value", 
+                                 "CV"),
+                   col_types = cols(), skip = 1) %>% 
+  dplyr::select(-c(Period, week, `State ANSI`, `Ag District`, 
+                   `Ag District Code`, `County ANSI`, Region, 
+                   watershed_code, Watershed, Commodity)) %>%
+  dplyr::filter(region %in% c("MAINE", "MASSACHUSETTS", "MINNESOTA", 
+                              "NEW HAMPSHIRE", "NEW YORK", "PENNSYLVANIA", 
+                              "VERMONT")) %>%
+  mutate(Value = ifelse(Value == "(D)" | Value == "(L)" | Value == "(Z)", NA, Value),
+         CV = ifelse(CV == "(D)" | CV == "(L)" | CV == "(Z)" | CV == "(H)", NA, CV)) %>% 
+  mutate(value = parse_number(Value),
+         cv = parse_number(CV)) %>% 
+  dplyr::select(-Value, - CV) %>% 
+  mutate(region = case_when(
+    region == "MAINE" ~ "ME",
+    region == "MASSACHUSETTS" ~ "MA",
+    region == "MINNESOTA" ~ "MN",
+    region == "NEW HAMPSHIRE" ~ "NH",
+    region == "NEW YORK" ~ "NY",
+    region == "PENNSYLVANIA" ~ "PA",
+    region == "VERMONT" ~ "VT"
+  )) %>% filter(geo_level == "STATE", # Currently focusing on the state data.
+                domain == "TOTAL" &
+                  `Domain Category` == "NOT SPECIFIED" & 
+                  data_item %in% c("MAPLE SYRUP - NUMBER OF TAPS",
+                                   "MAPLE SYRUP - OPERATIONS WITH PRODUCTION",
+                                   "MAPLE SYRUP - OPERATIONS WITH SALES",
+                                   "MAPLE SYRUP - OPERATIONS WITH TAPS",
+                                   "MAPLE SYRUP - PRODUCTION, MEASURED IN GALLONS",
+                                   "MAPLE SYRUP - SALES, MEASURED IN $")) %>% 
+  mutate(item = case_when(
+    grepl("NUMBER OF TAPS", data_item) ~ "n_taps",
+    grepl("OPERATIONS WITH PRODUCTION", data_item) ~ "ops_prod",
+    grepl("OPERATIONS WITH SALES", data_item) ~ "ops_sales",
+    grepl("OPERATIONS WITH TAPS", data_item) ~ "ops_taps",
+    grepl("PRODUCTION, MEASURED", data_item) ~ "prod",
+    grepl("SALES, MEASURED", data_item) ~ "sales"
+  )) %>%  
+  dplyr::select(-c(geo_level, county, zip_code)) %>%
+  pivot_wider(id_cols = c(source, yr, region), 
+              names_from = item,
+              values_from = c(cv, value),
+              names_sep = "_") %>% 
+  dplyr::select(-c(value_ops_prod, value_ops_sales, cv_ops_prod, cv_ops_sales)) %>%
+  rename(n_taps = "value_n_taps", prod = "value_prod", sales = "value_sales", 
+         n_ops = "value_ops_taps", cv_n_ops = "cv_ops_taps") %>%
+  mutate(m_taps = n_taps / n_ops,
+         y = prod / n_taps)
 
 # Additional daily data ----
 # dates <- format(seq(from = as_date("2024-02-15"), 

@@ -2,11 +2,6 @@
 # Script to analyze and plot the beginning and end of season dates
 #-------------------------------------------------------------------------------
 
-# To-do: ------------ 
-# - TR Add change in size of operation to analysis (NASS census data) and
-#      uncertainties from coefficients of variation
-# - TR Add credible interval for the data
-
 # Load dependencies ----
 if(!existsFunction("brms")) library("brms") 
 
@@ -19,7 +14,7 @@ priors <- c(set_prior("normal(0, 1)", class = "b"),  # fixed effects for the tre
 
 # Model a linear trend for the onset (open), first boil, and end  (close) of 
 # the season ----
-mod_o <- brm(formula = o ~ yr + (yr | region / site),
+mod_o <- brm(formula = o ~ yr + (1 + yr | region / site),
              data = d %>% filter(!is.na(o)), 
              family = gaussian(),
              prior = priors,
@@ -28,7 +23,7 @@ mod_o <- brm(formula = o ~ yr + (yr | region / site),
              control = list(adapt_delta = 0.95))
 summary(mod_o)
 plot(mod_o)
-mod_c <- brm(formula = c ~ yr + (yr | region / site),
+mod_c <- brm(formula = c ~ yr + (1 + yr | region / site),
              data = d %>% filter(!is.na(c)), 
              family = gaussian(),
              prior = priors,
@@ -36,7 +31,7 @@ mod_c <- brm(formula = c ~ yr + (yr | region / site),
              control = list(adapt_delta = 0.95))
 summary(mod_c)
 plot(mod_c)
-mod_b <- brm(formula = b ~ yr + (yr | region / site), 
+mod_b <- brm(formula = b ~ yr + (1 + yr | region / site), 
              data = d %>% filter(!is.na(b)), 
              family = gaussian(),
              prior = priors,
@@ -285,33 +280,3 @@ abline(lm(o_random_effects$region[, "Estimate", "yr"] ~
             dplyr::select(m_lat) %>% unlist()),
        lty = 2, lwd = 2)
 abline(h = 0, col ="darkgray")
-
-
-# TR - Started plotting the credibility intervals below ----
-
-# Extract posterior samples
-posterior_samples <- as_draws(mod_o)
-
-# Create a new data frame for predictions
-new_data <- tibble(
-  yr = rep(1873:2023, 6),
-  region = c(rep(c("ME", "MA", "NH", "NY"), each = 151), rep("VT", 2 * 151)),
-  site = c(rep("NA", 5 * 151), rep("VTH", 151)))
-
-# Generate posterior predictions
-posterior_preds <- posterior_predict(mod_o, newdata = new_data)
-
-# Calculate the 95% credibility intervals
-cred_intervals <- apply(posterior_preds, 2, quantile, probs = c(0.025, 0.975))
-
-# Plot the original data
-plot(d$yr, d$o, pch = 16, xlab = "Year", ylab = "Outcome", main = "Linear Trend with 95% Credibility Intervals")
-
-# Add the fitted line (mean prediction)
-lines(new_data$yr, apply(posterior_preds, 2, mean), col = "blue")
-
-# Add the 95% credibility intervals
-lines(new_data$yr, cred_intervals[1, ], col = "red", lty = 2)
-lines(new_data$yr, cred_intervals[2, ], col = "red", lty = 2)
-
-#===============================================================================
