@@ -377,7 +377,7 @@ d_cens <- read_csv(file = "./data/D25B89FB-A611-3258-B8AD-AB089064EE13.csv",
                                    "MAPLE SYRUP - PRODUCTION, MEASURED IN GALLONS",
                                    "MAPLE SYRUP - SALES, MEASURED IN $")) %>% 
   mutate(item = case_when(
-    grepl("NUMBER OF TAPS", data_item) ~ "n_taps",
+    grepl("NUMBER OF TAPS", data_item) ~ "ntaps",
     grepl("OPERATIONS WITH PRODUCTION", data_item) ~ "ops_prod",
     grepl("OPERATIONS WITH SALES", data_item) ~ "ops_sales",
     grepl("OPERATIONS WITH TAPS", data_item) ~ "ops_taps",
@@ -390,10 +390,10 @@ d_cens <- read_csv(file = "./data/D25B89FB-A611-3258-B8AD-AB089064EE13.csv",
               values_from = c(cv, value),
               names_sep = "_") %>% 
   dplyr::select(-c(value_ops_prod, value_ops_sales, cv_ops_prod, cv_ops_sales)) %>%
-  rename(n_taps = "value_n_taps", prod = "value_prod", sales = "value_sales", 
-         n_ops = "value_ops_taps", cv_n_ops = "cv_ops_taps") %>%
-  mutate(m_taps = n_taps / n_ops,
-         y = prod / n_taps)
+  rename(ntaps = "value_n_taps", prod = "value_prod", sales = "value_sales", 
+         w = "value_ops_taps", cv_w = "cv_ops_taps") %>%
+  mutate(mtaps = ntaps / w,
+         y = prod / ntaps)
 
 # Additional daily data ----
 # dates <- format(seq(from = as_date("2024-02-15"), 
