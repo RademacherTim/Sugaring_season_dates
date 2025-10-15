@@ -9,8 +9,8 @@ if(!existsFunction("brms")) library("brms")
 if(!exists("d")) source("01_read_data.R")
 
 # Set the priors ----
-priors <- c(set_prior("normal(0, 1)", class = "b"),  # fixed effects for the trend over time
-            set_prior("normal(0, 1)", class = "sd")) # group-level effects of region and site
+priors <- c(set_prior("normal(0, 10)", class = "b"),  # fixed effects for the trend over time
+            set_prior("normal(0, 10)", class = "sd")) # group-level effects of region and site
 
 # Model a linear trend for the onset (open), first boil, and end  (close) of 
 # the season ----
