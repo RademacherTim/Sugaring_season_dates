@@ -7,7 +7,7 @@
 
 # VTC is the Vermont Technical College in Randolph
 # VTU is a local sugarmaker from Northern Vermont.
-# VTF is Fleury's Hill Maple Farm in Richford Vermont.
+# VTF is Fleury's Hill Maple Farm in Richford Vermont. N.B.: Name to be retracted before publication.
 
 # Load dependencies ----
 if(!existsFunction("%≥%")) library("tidyverse")
@@ -55,8 +55,7 @@ d_PA <- read_excel(path = paste0("./data/", file_name),
   mutate(region = "PA")
 
 # Combine PA and other NASS data ---
-d <- bind_rows(d, d_PA)
-rm(d_PA)
+d <- bind_rows(d, d_PA); rm(d_PA)
 
 # Add region's southern most, northern most and mean latitude ----
 # N.B.: Before 1999 only southern Maine was included in the NASS data and since 
@@ -194,7 +193,7 @@ d1 <- d_StJ %>%
   mutate(yr = y,
          region = "MN",
          t = yday(tapping_date),
-         o = NA,
+         o = yday(first_sap),
          c = yday(last_b),
          y = t_sy_y / n_taps,
          b = yday(b),
@@ -234,7 +233,7 @@ d2 <- read_excel(path = paste0("./data/Quebec/", file_name),
          b = NA,
          typ = "syrup",
          ssc = NA,
-         ntaps = 0, # TR - Need to fill this in from the separate spreadsheet
+         ntaps = 0, # Filled with number of taps from the separate spreadsheet
          o_date = as_date(o_date),
          c_date = as_date(c_date),
          b_date = NA,
@@ -243,8 +242,8 @@ d2 <- read_excel(path = paste0("./data/Quebec/", file_name),
          m_lat = NA, # Filled in below
          n_lat = NA, # Filled in below
          s_lat = NA, # Filled in below
-         w = 0,  # TR - To be filled in from  number of companies from separate file
-         site = "STJ",
+         w = 0,  # Filled with number of companies from separate file
+         site = "NA", # Needs to be a character to work for the model
          source = "PPAQ") %>%
   relocate(yr, region, o, c, y, b, typ, t, ssc, ntaps, w, o_date, c_date, b_date, 
           d_o, d_b, m_lat, n_lat, s_lat, site, source, i_o)

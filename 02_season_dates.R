@@ -15,24 +15,24 @@ priors <- c(set_prior("normal(0, 10)", class = "b"),  # fixed effects for the tr
 # Model a linear trend for the onset (open), first boil, and end  (close) of 
 # the season ----
 mod_o <- brm(formula = o ~ yr + (1 + yr | region / site),
-             data = d %>% filter(!is.na(o)), 
+             data = d %>% filter(!is.na(o)) %>% filter(region != "PRO"), # Have to remove the provincial data for Quebec to avoid double counting
              family = gaussian(),
              prior = priors,
              #weights = d %>% filter(!is.na(o)) %>% select(w) %>% ungroup(), # TR - Need to look more into how to treat region-averages versus site values.
              chains = 4, cores = 4, iter = 4000,
-             control = list(adapt_delta = 0.95))
+             control = list(adapt_delta = 0.99))
 summary(mod_o)
 plot(mod_o)
 mod_c <- brm(formula = c ~ yr + (1 + yr | region / site),
-             data = d %>% filter(!is.na(c)), 
+             data = d %>% filter(!is.na(c)) %>% filter(region != "OMSPA" & region != "PRO"), # Have to remove the provincial data for Ontario and Quebec to avoid double counting
              family = gaussian(),
              prior = priors,
              chains = 4, cores = 4, iter = 4000,
-             control = list(adapt_delta = 0.95))
+             control = list(adapt_delta = 0.99))
 summary(mod_c)
 plot(mod_c)
 mod_b <- brm(formula = b ~ yr + (1 + yr | region / site), 
-             data = d %>% filter(!is.na(b)), 
+             data = d %>% filter(!is.na(b)) %>% filter(region != "OMSPA"), # Have to remove OMSPA to avoid double counting
              family = gaussian(),
              prior = priors,
              chains = 4, cores = 4, iter = 6000,
@@ -53,16 +53,20 @@ b_random_effects <- ranef(mod_b)  # Random effects by group (region)
 # well as the Ontario data from CFS and OMSPA ----- 
 
 # Define the layout matrix
-layout_matrix <- matrix(c(1, 2, 3, 4, 5, 5, 6, 7, 8), nrow = 3, byrow = TRUE)
+layout_matrix <- matrix(c(1:5, 5, 6, 7:19), nrow = 5, byrow = TRUE)
 
 # Set the layout ----
-layout(layout_matrix, widths = c(1, 1, 1, 1, 2, 1, 1, 1), heights = c(1, 1, 1))
+layout(layout_matrix, widths = c(rep(1, 4), 2, rep(1, 13)), heights = rep(1, 6))
 
 # Set plot margins ----
 par(mar = c(5, 5, 1, 1))
 
-# Loop over regions, as there is one plot per region ----
-for (region in c("ME", "MA", "NH", "NY", "VT", "MN", "CFS", "OMSPA", "PRO")){
+# Loop over regions, as there is one plot per region (i.e., US States and 
+# administrative regions in Ontario and Québéc) ----
+# TR - Need to fix this. NOw that we are looking at all administrative regions in Quebec and Ontario
+for (region in c("ME", "MA", "NH", "NY", "VT", "MN", "CFS", "AL", "AQ", "EA", 
+                 "GB", "HK", "LA", "OV", "QU", "SI", "SW", "WW", "BSL", "BEA", 
+                 "CDQ", "CDS", "EST", "LAN", "LAU", "MAU", "MOE", "MOO", "QUE")){
   
   # Determine if there are individual sites in a region (NA for region-wide averages)
   if (region != "VT" & region != "MN") {
