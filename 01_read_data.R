@@ -6,6 +6,8 @@
 
 # VTU is a local sugarmaker from Northern Vermont.
 
+# TR - Check coordinates with Louis and make sure that the Quebec data is read in correctly
+
 # Load dependencies ----
 if(!existsFunction("%≥%")) library("tidyverse")
 if(!existsFunction("read_excel")) library("readxl")
@@ -212,101 +214,53 @@ d1 <- d_StJ %>%
 d <- rbind(d, d1); rm(d1, d_StJ)
 
 # Start reading the data from Quebec ----
-file_name <- "SondagesHebdomadaires.xls"
-for (year in 1999:2012){ 
-  line <- -15*year+30196
-  dates <- read_excel(path = paste0("./data/",file_name), 
-                      sheet = "1999a2012", 
-                      range = paste0("C",line,":L",line), col_types = c("date"), 
-                      col_names = c("week1", "week2", "week3", "week4", "week5", 
-                                    "week6", "week7", "week8", "week9", "week10")) %>%
-    mutate(week1 = as_date(week1),
-           week2 = as_date(week2),
-           week3 = as_date(week3),
-           week4 = as_date(week4),
-           week5 = as_date(week5),
-           week6 = as_date(week6),
-           week7 = as_date(week7),
-           week8 = as_date(week8),
-           week9 = as_date(week9),
-           week10 = as_date(week10)) %>% 
-    pivot_longer(cols = 1:10, names_to = "week", values_to = "date")
-  tmp <- read_excel(path = paste0("./data/", file_name), 
-                    sheet = "1999a2012", 
-                    range = paste0("N",line+2,":X",line+13),
-                    col_names = c("region", "week1", "week2", "week3", "week4", 
-                                  "week5", "week6", "week7", "week8", "week9", 
-                                  "week10")) %>% 
-    pivot_longer(cols = 2:11, names_to = "week", values_to = "y")
-  tmp <- left_join(tmp, dates, by = "week")
-  
-  if (year == 1999) {
-    d2 <- tmp
-  } else {
-    d2 <- rbind(d2, tmp)
-  }
-}
-
-# Get the first date that has the final yield for each region and year ----
-# N.B.: Production might have ceased up to 6 days earlier due to the weekly 
-# nature of the survey.
-# N.B.: If the first date with the annual production was the last date of the 
-# survey, production might have ended an indeterminate amount of time later
-season_c <- d2 %>%
-  mutate(yr = year(date)) %>%
-  group_by(region, yr) %>%
-  filter(y == max(y, na.rm = TRUE)) %>%
-  slice_min(date, with_ties = FALSE) %>%
-  ungroup() %>%
-  select(region, yr, date, y) %>% 
-  rename(c_date = "date")
-
-# Get the first date that has some production for each region and year ----
-# N.B.: Production might have started up to 6 days earlier due to the weekly 
-# nature of the survey ----
-season_o <- d2 %>% 
-  mutate(yr = year(date)) %>%
-  filter(y > 0) %>% 
-  group_by(region, yr) %>%
-  summarise(b_date = min(date), .groups = "drop")
-
-# Add necessary columns to join the data ----
-d3 <- left_join(season_o, season_c, by = join_by(region, yr)) %>%
-  mutate(o = NA, 
-         c = yday(c_date),
-         y = y / 11, 
-         b = yday(b_date),
-         typ = "syrup", 
+file_name <- "DébutSaisonCouléeRegions.xlsx"
+d2 <- read_excel(path = paste0("./data/Quebec/", file_name),                      
+                 sheet = "DatePcomplete_Regions", skip = 1,
+                 col_names = c("region", "yr", "o_date", "o", "i_o", "c_date", 
+                               "c", "d_o")) %>%
+  mutate(yr = yr,
+         region = region,
          t = NA,
-         ssc = NA, 
-         ntaps = NA,
-         w = NA,
-         o_date = NA,
-         d_o = NA,
-         d_b = c - b,
-         site = "NA",
+         o = o,
+         c = c,
+         y = NA,
+         b = NA,
+         typ = "syrup",
+         ssc = NA,
+         ntaps = NA, # TR - Need to fill this in from the separate spreadsheet
+         o_date = as_date(o_date),
+         c_date = as_date(c_date),
+         b_date = NA,
+         d_o = d_o,
+         d_b = NA,
+         m_lat = NA, # Filled in below
+         n_lat = NA, # Filled in below
+         s_lat = NA, # Filled in below
+         w = NA,  # TR - To be filled in from  number of companies from separate file
+         site = "STJ",
          source = "PPAQ") %>%
-  select(yr, region, o, c, y, b, typ, ssc, ntaps, w, o_date, c_date, b_date, d_o, 
-         d_b, everything())
+  relocate(yr, region, o, c, y, b, typ, t, ssc, ntaps, w, o_date, c_date, b_date, 
+          d_o, d_b, m_lat, n_lat, s_lat, site, source, i_o)
 
 # Simplify regional names for the administrative regions ----
-d3 <- d3 %>% mutate(region = case_when(
-  region == "Bas-St-Laurent" ~ "BSL",
+d2 <- d2 %>% mutate(region = case_when(
+  region == "Bas-Saint-Laurent–Gaspésie" ~ "BSL",
   region == "Beauce" ~ "BEA",
   region == "Centre-du-Québec" ~ "CDQ",
   region == "Cote-du-Sud" ~ "CDS",
   region == "Estrie" ~ "EST",
   region == "Lanaudière" ~ "LAN",
-  region == "Laurentides" ~ "LAU",
   region == "Mauricie" ~ "MAU",
-  region == "Provincial" ~ "PRO",
-  region == "Québec" ~ "QUE",
-  region == "St-hyacinthe" ~ "STH",
-  region == "Valleyfield" ~ "VAL",
+  region == "Montérégie-Est" ~ "MOE",
+  region == "Outaouais-Laurentides" ~ "LAU",
+  region == "Montérégie-Ouest" ~ "MOO",
+  region == "Province" ~ "PRO",
+  region == "Québec" ~ "QUE"
 ))
 
 # Add latitudes estimated from Fig. 1 in Houle et al. (2015) ----
-d3 <- d3 %>% mutate(m_lat = case_when(
+d2 <- d2 %>% mutate(m_lat = case_when(
   region == "BSL" ~ 47.99,
   region == "BEA" ~ 46.08,
   region == "CDQ" ~ 45.98,
@@ -317,8 +271,8 @@ d3 <- d3 %>% mutate(m_lat = case_when(
   region == "MAU" ~ 46.54,
   region == "PRO" ~ 46.29,
   region == "QUE" ~ 46.94,
-  region == "STH" ~ 45.51,
-  region == "VAL" ~ 45.21,
+  region == "MOE" ~ 45.51, # TR - Assuming that Monteregie-Est is what was previously called St-Hyacinthe
+  region == "MOO" ~ 45.21, # TR - Assuming that Monteregie-Ouest is what was previously called Valleyfield
 ), n_lat = case_when(
   region == "BSL" ~ 48.53,
   region == "BEA" ~ 46.51,
@@ -330,8 +284,8 @@ d3 <- d3 %>% mutate(m_lat = case_when(
   region == "MAU" ~ 46.85,
   region == "PRO" ~ 48.53,
   region == "QUE" ~ 47.35,
-  region == "STH" ~ 46.02,
-  region == "VAL" ~ 45.41,
+  region == "MOE" ~ 46.02,
+  region == "MOO" ~ 45.41,
 ), s_lat = case_when(
   region == "BSL" ~ 47.45,
   region == "BEA" ~ 45.64,
@@ -343,11 +297,24 @@ d3 <- d3 %>% mutate(m_lat = case_when(
   region == "MAU" ~ 46.23,
   region == "PRO" ~ 45.00,
   region == "QUE" ~ 46.53,
-  region == "STH" ~ 45.00,
-  region == "VAL" ~ 45.00,
+  region == "MOE" ~ 45.00,
+  region == "MOO" ~ 45.00,
 ))
 
-d <- rbind(d, d3); rm(d2, d3, tmp, season_o, season_c)
+# Add number of taps (ntaps) and companies (w) ----
+file_name <- "NbEntreprises_NbEntailles.xlsx"
+d3 <- read_excel(path = paste0("./data/Quebec/", file_name),                      
+                 sheet = "data", skip = 1, 
+                 col_names = c("yr", "ntaps_PRO", "w_PRO", "ntaps_BEA", "w_BEA", 
+                               "ntaps_BSL", "w_BSL", "ntaps_EST", "w_EST", 
+                               "ntaps_CDQ", "w_CDQ", "ntaps_MOE", "w_MOE", 
+                               "ntaps_QUE", "w_QUE", "ntaps_LAU", "w_LAU",
+                               "ntaps_LAN", "w_LAN")) %>% 
+  pivot_longer() # TR - Need to convert ntaps and w and join them to the d2 tibble 
+
+# Add i_o for the data that is not from Quebec ----
+d <- d %>% mutate(i_o = NA)
+d <- rbind(d, d2); rm(d2)
 
 # Read in NASS census data ----
 d_cens <- read_csv(file = "./data/D25B89FB-A611-3258-B8AD-AB089064EE13.csv",
