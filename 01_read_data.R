@@ -98,7 +98,7 @@ d <- d %>% mutate(m_lat = case_when(
     region == "VTC" ~ 43.94,
     region == "VTH" ~ 43.94,
     region == "VTU" ~ 44.63422647268263, # TR - Coordinates were estimated for this producer. 
-    region == "VTF" ~ 44.99132860860256,, # Rough coordinates for Fleury's Hill Maple Farm in Richford, Vermont
+    region == "VTF" ~ 44.99132860860256, # Rough coordinates for Fleury's Hill Maple Farm in Richford, Vermont
     region == "ON" ~ 56.85,
     region == "CFS" ~ 51.00, # TR - They were all in southern Ontario, so I just limited it at 51°.
     region == "OMSPA" ~ 51.00, # TR - They tend to be further south and this is probably too far north. I just put 51°N
@@ -234,7 +234,7 @@ d2 <- read_excel(path = paste0("./data/Quebec/", file_name),
          b = NA,
          typ = "syrup",
          ssc = NA,
-         ntaps = NA, # TR - Need to fill this in from the separate spreadsheet
+         ntaps = 0, # TR - Need to fill this in from the separate spreadsheet
          o_date = as_date(o_date),
          c_date = as_date(c_date),
          b_date = NA,
@@ -243,7 +243,7 @@ d2 <- read_excel(path = paste0("./data/Quebec/", file_name),
          m_lat = NA, # Filled in below
          n_lat = NA, # Filled in below
          s_lat = NA, # Filled in below
-         w = NA,  # TR - To be filled in from  number of companies from separate file
+         w = 0,  # TR - To be filled in from  number of companies from separate file
          site = "STJ",
          source = "PPAQ") %>%
   relocate(yr, region, o, c, y, b, typ, t, ssc, ntaps, w, o_date, c_date, b_date, 
@@ -307,7 +307,7 @@ d2 <- d2 %>% mutate(m_lat = case_when(
   region == "MOO" ~ 45.00,
 ))
 
-# Add number of taps (ntaps) and companies (w) ----
+# Add number of taps (ntaps) and companies (w) from a different spreadsheet ----
 file_name <- "NbEntreprises_NbEntailles.xlsx"
 d3 <- read_excel(path = paste0("./data/Quebec/", file_name),                      
                  sheet = "data", skip = 1, 
@@ -316,11 +316,19 @@ d3 <- read_excel(path = paste0("./data/Quebec/", file_name),
                                "ntaps_CDQ", "w_CDQ", "ntaps_MOE", "w_MOE", 
                                "ntaps_QUE", "w_QUE", "ntaps_LAU", "w_LAU",
                                "ntaps_LAN", "w_LAN")) %>% 
-  pivot_longer() # TR - Need to convert ntaps and w and join them to the d2 tibble 
+  pivot_longer (cols = -yr,  # All columns except 'yr'
+                names_to = c("variable", "region"),
+                names_sep = "_",           # Split column names at underscore
+                values_to = "value") %>% 
+  pivot_wider(names_from = variable,
+              values_from = value) %>% 
+  mutate(ntaps = ntaps * 1000 / w) %>% # Calculate the mean number of taps per company from the total number of taps
+  filter(yr >= 1999) # We do not have data for open and close before 1999
+d2 <- rows_update(x = d2, y = d3, by = c("yr", "region"))
 
 # Add i_o for the data that is not from Quebec ----
 d <- d %>% mutate(i_o = NA)
-d <- rbind(d, d2); rm(d2)
+d <- rbind(d, d2); rm(d2, d3)
 
 # Read in NASS census data ----
 d_cens <- read_csv(file = "./data/D25B89FB-A611-3258-B8AD-AB089064EE13.csv",
@@ -398,7 +406,4 @@ d_cens <- read_csv(file = "./data/D25B89FB-A611-3258-B8AD-AB089064EE13.csv",
 #   mutate(date = as_date(paste(y, month_day, sep = "-"))) %>%
 #   dplyr::select(-month_day, -y)
 #   
-
-# Clean up workspace ----
-rm(file_name, line, year, dates)
 #===============================================================================
