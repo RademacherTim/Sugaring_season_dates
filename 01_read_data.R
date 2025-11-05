@@ -3,10 +3,11 @@
 #-------------------------------------------------------------------------------
 
 # TR - Make sure the census data is read correctly and integrated in the d tibble
-
-# VTU is a local sugarmaker from Northern Vermont.
-
 # TR - Check coordinates with Louis and make sure that the Quebec data is read in correctly
+
+# VTC is the Vermont Technical College in Randolph
+# VTU is a local sugarmaker from Northern Vermont.
+# VTF is Fleury's Hill Maple Farm in Richford Vermont.
 
 # Load dependencies ----
 if(!existsFunction("%≥%")) library("tidyverse")
@@ -19,9 +20,10 @@ d <- read_excel(path = paste0("./data/", file_name),
              col_names = c("yr", "o_ME", "c_ME", "o_MA", "c_MA", "o_NH", "c_NH", 
                            "o_VT", "c_VT", "o_NY", "c_NY", "y_VT", "b_VTC",
                            "o_VTH", "b_VTH", "c_VTH", "typ_VTH", "t_VTU", 
-                           "b_VTU", "c_VTU", "y_VTU", "b_CFS", "b_OMSPA", 
-                           "c_OMSPA", "ssc_OMSPA", "y_OMSPA", "ntaps_OMSPA", 
-                           "w_OMSPA", "b_AL", "c_AL", "ssc_AL", "y_AL", 
+                           "b_VTU", "c_VTU", "y_VTU","o_VTF", "c_VTF", "y_VTF", 
+                           "b_CFS", "b_OMSPA", "c_OMSPA", "ssc_OMSPA", 
+                           "y_OMSPA", "ntaps_OMSPA", "w_OMSPA", "b_AL", 
+                           "c_AL", "ssc_AL", "y_AL", 
                            "ntaps_AL", "w_AL", "b_AQ", "c_AQ", "ssc_AQ", 
                            "y_AQ", "ntaps_AQ", "w_AQ", "b_EA", "c_EA", "ssc_EA", 
                            "y_EA", "ntaps_EA", "w_EA", "b_GB", "c_GB", "ssc_GB", 
@@ -70,6 +72,7 @@ d <- d %>% mutate(m_lat = case_when(
     region == "VTC" ~ 43.94,
     region == "VTH" ~ 43.94,
     region == "VTU" ~ 44.63180408635008, # TR - Coordinates were estimated for this producer. 
+    region == "VTF" ~ 44.98867889648642, # Rough coordinates for Fleury's Hill Maple Farm in Richford, Vermont
     region == "CFS" ~ 46.00, # TR - They were all in southern Ontario
     region == "OMSPA" ~ 46.00, # TR - Rough guess, based on the fact that they tend to be in Southern Ontario
     region == "ON" ~ 46.00, # TR - Rough guess, based on the fact that they tend to be in Southern Ontario
@@ -95,6 +98,7 @@ d <- d %>% mutate(m_lat = case_when(
     region == "VTC" ~ 43.94,
     region == "VTH" ~ 43.94,
     region == "VTU" ~ 44.63422647268263, # TR - Coordinates were estimated for this producer. 
+    region == "VTF" ~ 44.99132860860256,, # Rough coordinates for Fleury's Hill Maple Farm in Richford, Vermont
     region == "ON" ~ 56.85,
     region == "CFS" ~ 51.00, # TR - They were all in southern Ontario, so I just limited it at 51°.
     region == "OMSPA" ~ 51.00, # TR - They tend to be further south and this is probably too far north. I just put 51°N
@@ -121,6 +125,7 @@ d <- d %>% mutate(m_lat = case_when(
     region == "VTC" ~ 43.94,
     region == "VTH" ~ 43.94,
     region == "VTU" ~ 44.62869868000306, # TR - Coordinates were estimated for this producer. 
+    region == "VTF" ~ 44.986850175837134, # Rough coordinates for Fleury's Hill Maple Farm in Richford, Vermont
     region == "ON" ~ 41.69,
     region == "CFS" ~ 41.69, # TR - They were all in southern Ontario
     region == "OMSPA" ~ 41.69, # TR - They tend to be further south and this.
@@ -141,7 +146,8 @@ d <- d %>% mutate(site = case_when(
   region == "VTC" ~ "VTC",
   region == "VTH" ~ "VTH",
   region == "VTU" ~ "VTU",
-  region != "VTC" & region != "VTH" & region != "VTU" ~ "NA",
+  region == "VTF" ~ "VTF",
+  region != "VTC" & region != "VTH" & region != "VTU" & region != "VTF" ~ "NA",
   region %in% c("MA", "ME", "NH", "NY", "ON", "PA") ~ "NA"),
   source = case_when(
     region %in% c("MA", "ME", "NH", "NY", "PA") ~ "NASS",
@@ -149,8 +155,8 @@ d <- d %>% mutate(site = case_when(
     region %in% c("OMSPA", "AL", "AQ", "EA", "GB", "HK", "LA", "OV", "QI", "SI", 
                   "SW", "WW") ~ "OMSPA",
     region == "VT" & site == "NA" ~ "NASS",
-    region %in% c("VTH", "VTC") ~ "IND"))
-d$region[d$site %in% c("VTC", "VTH", "VTU")] <- "VT" # Set region for VTC, VTH, and VTU to VT
+    region %in% c("VTH", "VTC", "VTF") ~ "IND"))
+d$region[d$site %in% c("VTC", "VTH", "VTU", "VTF")] <- "VT" # Set region for VTC, VTH, VTU, and VTF to VT
 d$region[d$site %in% c("CFS", "OMSPA")] <- "ON" # Set region for CFS & OMSPA to ON
 
 # Add a weights column to give more importance to NASS state-averages ----
