@@ -222,21 +222,21 @@ d <- rbind(d, d1); rm(d1, d_StJ)
 file_name <- "DébutSaisonCouléeRegions.xlsx"
 d2 <- read_excel(path = paste0("./data/Quebec/", file_name),                      
                  sheet = "DatePcomplete_Regions", skip = 1,
-                 col_names = c("region", "yr", "o_date", "o", "i_o", "c_date", 
+                 col_names = c("region", "yr", "b_date", "b", "i_o", "c_date", 
                                "c", "d_o")) %>%
   mutate(yr = yr,
          region = region,
          t = NA,
-         o = o,
+         o = NA,
          c = c,
          y = NA,
-         b = NA,
+         b = b,
          typ = "syrup",
          ssc = NA,
          ntaps = 0, # Filled with number of taps from the separate spreadsheet
-         o_date = as_date(o_date),
+         o_date = NA,
          c_date = as_date(c_date),
-         b_date = NA,
+         b_date = as_date(b_date),
          d_o = d_o,
          d_b = NA,
          m_lat = NA, # Filled in below

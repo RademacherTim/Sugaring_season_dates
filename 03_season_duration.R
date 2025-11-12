@@ -17,6 +17,7 @@ plot(x = d$d_b,
 abline(a = 0, b = 1, lty = 2, col = "gray")
 axis(side = 1)
 axis(side = 2, las = 1)
+# TR - Ned to figure out what is happening with the one year for which the season was longer from the first boil than from the open
 
 # Define the two response models for the duration since season open and since 
 # first boil, both model need to impute missing values, as we do not have this 
